@@ -1,0 +1,4 @@
+# Ignore images and changes files because they are too
+# big for githubExtension App-fil
+*.image
+*.changes
