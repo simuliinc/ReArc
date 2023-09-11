@@ -1,0 +1,16 @@
+{
+	"python.testing.unittestArgs": [
+		"-v",
+		"-s",
+		"./ReArcPython",
+		"-p",
+		"test*.py"
+	],
+	"python.testing.pytestEnabled": false,
+	"python.testing.unittestEnabled": true,
+	"python.analysis.extraPaths": [
+		"./ReArchPython",
+		"./ReArcPython"
+	],
+	"pythonTestExplorer.testFramework": "unittest"
+}
