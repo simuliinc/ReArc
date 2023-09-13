@@ -10,8 +10,8 @@ class TestInjectedPotentialDecayCurve(unittest.TestCase):
                 cls.GlobalInjectedPotentialDecayCurve = InjectedPotentialDecayCurve().value
 
 	def test(self):
-                InjectedPotentialDecayCurve = np.asarray(InjectedPotentialDecayCurve)
-                GlobalInjectedPotentialDecayCurve = np.asarray(GlobalInjectedPotentialDecayCurve)
+                cls.InjectedPotentialDecayCurve = np.asarray(InjectedPotentialDecayCurve)
+                cls.GlobalInjectedPotentialDecayCurve = np.asarray(GlobalInjectedPotentialDecayCurve)
                 assert(InjectedPotentialDecayCurve.all() == GlobalInjectedPotentialDecayCurve).all()
  
 if __name__ == '__main__':
