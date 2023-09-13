@@ -1,0 +1,29 @@
+site_name: Simuli Python Code Documentation - Harit Talwar (test)
+theme:
+  name: material
+  features:
+    - search.suggest
+    - search.highlight
+    - content.tab.link
+  highlightjs: true;
+  markdown_extensions:
+    - pymdownx.highlight:
+        anchor_linemus: true
+    - pymdownx.inlinehilite
+    - pymdownx.snippets
+    - adominition
+    - pymdownx.arithmetex:
+        generic: true
+    - footnotes
+    - pymdownx.details
+    - pymdownx.superfences
+    - pymdownx.mark
+    - attr_list
+    # - pymdownx.emoji:
+    #   emjoi_index: !!python/name:materialx.emjoi.twemoji
+    #   emjoi_generator: !!python/name:materialx.emjoi.to_svg
+
+  nav_style: dark;
+  hljs_languages:
+    - yaml
+    - rust  
