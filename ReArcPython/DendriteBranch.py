@@ -6,6 +6,7 @@
 
 from Globals import *
 from PotentialRecord import *
+import itertools
 
 class DendriteBranch:
 
@@ -85,7 +86,150 @@ class DendriteBranch:
 
 		return self.firingStatus
 
-             
+	def addConditionRecordingManagementInput(self, connection):
+		# Adds a connection identity (connection) to conditionRecordingManagementInputs, 
+		# makes the corresponding connection weight CorticalConditionRecordingManagementInputWeight 
+		# in conditionRecordingManagementInputWeights.
+		#
+		#  ****************************************************************************************************
+		#  * (Currently turned off because NumberOfConditionRecordingOutputsFromBlackBoxHippocampus = 0 RJT)  *
+		#  ****************************************************************************************************
+		#
+		self.managementInputs.append(RecordingManagementInputs(connection, CorticalConditionRecordingManagementInputWeight))
+
+
+	def addExcittatoryInput(self, connection):
+		# Adds a connection identity (connection) to excitatoryInputs, makes the corresponding connection weight 
+		# 10 in excitatoryInputWeights, and makes the time since the input was last active 100 timeslots in 
+		# recentActivityOfExcitatoryInputs.  
+		# branchFiringsSinceLastIncreaseInExcitatoryWeights is set initially at true for each input. The first time 
+		# the DendriteBranch instance fires and receives a backpropagating action potential from the neuron, 
+		# if the input weight is increased this variable will be set at 0, and set at 2 if the input does not 
+		# fire with the timing to have a weight increase. Each subsequent time the DendriteBranch instance 
+		# fires followed by a backpropagating action potential, this variable will be set at 0 if the input 
+		# weight is increased, and increased by 1 if the input does not fire with the timing to have a weight 
+		# increase. If the variable reaches 5, the corresponding input weight is decreased by 10%. If the weight 
+		# is less that 1.0, the input is deleted. 
+		# When a weight reaches its maximum and is confirmed at that maximum, there will be no further changes. 
+		# This will be achieved by setting its corresponding lastIncreaseInExcitatoryWeights element to false.
+
+		input = ExcitatoryInput(connection)
+		input.weight = CorticalConditionDefiningInputWeight
+		input.recentActivity = 100
+		input.branchFiringSinceWeightChange = True
+		self.excitatoryInputs.append(input)	
+		self.conditionPermanence = False
+
+	def addExcitatoryInputFromSource(self, connection, source):
+		# Adds a connection identity (connection) to excitatoryInputs, makes the corresponding connection weight 10 
+		# in excitatoryInputWeights, and makes the time since the input was last active 100 timeslots in 
+		# recentActivityOfExcitatoryInputs.
+		# branchFiringsSinceLastIncreaseInExcitatoryWeights is set initially at true for each input. The first time 
+		# the DendriteBranch instance fires and receives a backpropagating action potential from the neuron, 
+		# if the input weight is increased this variable will be set at 0, and set at 2 if the input does not 
+		# fire with the timing to have a weight increase. Each subsequent time the DendriteBranch instance fires 
+		# followed by a backpropagating action potential, this variable will be set at 0 if the input weight is 
+		# increased, and increased by 1 if the input does not fire with the timing to have a weight increase. 
+		# If the variable reaches 5, the corresponding input weight is decreased by 10%. If the weight is less that 1.0, 
+		# the input is deleted. 
+		# When a weight reaches its maximum and is confirmed at that maximum, there will be no further changes. This will 
+		# be achieved by setting its corresponding lastIncreaseInExcitatoryWeights element to false.
+		
+		input = self.excitatoryInputs[source]
+		input.input = connection
+		input.weight = 1
+		input.recentActivity = 100
+		input.branchFiringSinceWeightChange = True
+		input.history.append({'connectionTime':0, 'changeMagnitude':0})
+		self.conditionPermanence = False
+
+	def addExcitatoryInputWithWeight(self, connection, initialSynapticWeight):
+		# Adds a connection identity (connection) to excitatoryInputs, makes the corresponding connection 
+		# weight 10 in excitatoryInputWeights, and makes the time since the input was last active 100 
+		# timeslots in recentActivityOfExcitatoryInputs.
+		# branchFiringsSinceLastIncreaseInExcitatoryWeights is set initially at true for each input. 
+		# The first time the DendriteBranch instance fires and receives a backpropagating action potential 
+		# from the neuron, if the input weight is increased this variable will be set at 0, and set at 2 if 
+		# the input does not fire with the timing to have a weight increase. Each subsequent time the 
+		# DendriteBranch instance fires followed by a backpropagating action potential, this variable will 
+		# be set at 0 if the input weight is increased, and increased by 1 if the input does not fire with 
+		# the timing to have a weight increase. If the variable reaches 5, the corresponding input weight 
+		# is decreased by 10%. If the weight is less that 1.0, the input is deleted. 
+		# When a weight reaches its maximum and is confirmed at that maximum, there will be no further changes. 
+		# This will be achieved by setting its corresponding lastIncreaseInExcitatoryWeights element to false.
+		input = ExcitatoryInput(connection)
+		input.weight = initialSynapticWeight
+		input.recentActivity = 100
+		input.branchFiringSinceWeightChange = True
+		self.conditionPermanence = False
+
+	def adjustWeightsOfRecentlyActiveInputs(self):
+
+		# NOTE MARCH 10th 2008:
+		# MAY NEED TO REVERSE INCREASE IF DOES NOT REPEAT WITHIN, SAY, 100 MSEC. IN OTHER WORDS, 
+		# A CONDITION MUST OCCUR MULTIPLE TIMES WITHIN THE SAME ATTENTION PERIOD FOR IT TO BE ESTABLISHED. 
+		# AT THE MOMENT, ONLY DECREASES IF CONNECTION WAS NOT RECENTLY ACTIVE WHEN A BACKPROPAGATING ACTION 
+		# POTENTIAL IS RECEIVED
+		# When the neuron fires, it sends a backpropagating action potential into its dendrite.This backpropagating 
+		# action potential increases the weights of synapses that have recently received an action potential, provided 
+		# that the branch has fired recently.
+		# IF the branch has fired within the last 5 milliseconds, all synapses that have received an action potential 
+		# within the last 5 milliseconds will have their weights increased.
+		# Activity of synapse
+		# Timeslots before		% increase
+		# 1				10
+		# 2				10
+		# 3				10
+		# 4				15
+		# 5				15
+		# 6				15
+		# 7				20
+		# 8				20
+		# 9				20
+		# 10			15
+		# 11			15
+		# 12			15
+		# 13			10
+		# 14			10
+		# 15			10
+
+		#WEIGHTS CAN ONLY BE ADJUSTED IF conditionPermanence = false
+		if not self.conditionPermanence:
+			# WEIGHTS ARE ONLY ADJUSTED IF THE BRANCH HAS FIRED WITHIN THE LAST 5 MILLISECONDS OR 15 TIMESLOTS"
+			if self.timeSinceLastActivityOfBranch < 16:	
+	
+				# THE FOLLOWING CODE IS ONLY INVOKED THE FIRST TIME THE BRANCH RECEIVES A BACKPROPAGATING ACTION 
+				# POTENTIAL. THE CODE SETS ALL THE ELEMENTS IN branchFiringsSinceLastIncreaseInExcitatoryWeights TO 1."
+				i = 0
+				for input in self.excitatoryInputs:
+					input.receiveBackPropogation()
+					
+					# THE FOLLOWING CODE INCREASES THE CONNECTION WEIGHT IF THE INPUT HAS BEEN ACTIVE SHORTLY BEFORE 
+					# THE BACKPROPAGATING ACTION POTENTIAL WAS RECEIVED FROM THE NEURON"	
+					
+					# Use the reecent activity value as an index to loook up the weight increase
+					# Modify the recent activity value to account for 0 based Python lookup and ensure that we don't 
+					# index over 14 which is the last position we define for percent increase  
+					index =  min((input.recentActivity - 1),14)
+					input.increaseConnectionWeightForIndex(index)
+										
+					# THE FOLLOWING CODE INCREASES branchFiringsSinceLastIncreaseInExcitatoryWeights IF THE CORRESPONDING CONNECTION 
+					# WEIGHT WAS NOT INCREASED (INDICATED BY branchFiringsSinceLastIncreaseInExcitatoryWeights NOT EQUAL TO 0). 
+					# NOTE THAT THE FIRST TIME THE BRANCH RECEIVES THE adjustWeightsOfRecentlyActiveInputs MESSAGE, THE ELEMENT IN 
+					# branchFiringsSinceLastIncreaseInExcitatoryWeights CORRESPONDING WITH INPUTS THAT WERE NOT RECENTLY ACTIVE IS 
+					# SET AT 2. SUBSEQUENT TIMES IT IS INCREASED BY 1
+					input.decreaseInactiveConnectionWeight()
+					
+				# THE FOLLOWING CODE REMOVES ALL THE CONNECTIONS SET AT false (now marked as deleteMe RJT) BECAUSE THEIR INPUT 
+				# WEIGHT WAS <= 1 AFTER 10 INCREASES IN ACTIVE BRANCH WEIGHTS. 
+				self.excitatoryInputs = list(itertools.filterfalse(lambda x: x.excitatoryInputs.deleteMe, self.excitatoryInputs))
+
+				for recordingManagementInput in self.conditionRecordingManagementInputs:
+					# THIS CODE DECREASES THE WEIGHT OF THE HIPPOCAMPAL INPUTS
+					recordingManagementInput.adjustWeightForHippocampus()
+
+				
+
 class ExcitatoryInput:
 	def __init__(self, input):
 		self.input = input
@@ -94,8 +238,12 @@ class ExcitatoryInput:
 		self.connectionTime = 0
 		self.changeMagnitude = 0
 		self.branchFiringSinceWeightChange = 0
+		self.backpropagatingActionPotentialRecieved = False
 		self.permanentConnection = False
 		self.history = [{'connectionTime':0, 'changeMagnitude':0}]
+		self.weightIncreasePercentage=[]
+		self.initWeightIncreasePercentage()
+		self.deleteMe = False
 
 	def advanceTime(self):
 		self.connectionTime += 1
@@ -122,4 +270,61 @@ class ExcitatoryInput:
 
 	def getInput(self):
 		return self.input
+	
+	def initWeightIncreasePercentage(self):
+		# Timeslots before		% increase (documented) % increase (in code RJT)
+		# 1						10						5
+		# 2						10						5
+		# 3						10						5
+		# 4						15						10
+		# 5						15						10
+		# 6						15						10	
+		# 7						20						15
+		# 8						20						15
+		# 9						20						15
+		# 10					15						10
+		# 11					15						10
+		# 12					15						10
+		# 13					10						5
+		# 14					10						5
+		# 15					10						5
+		self.weightIncreasePercentage = [5]*3 + [10]*3 + [15]*3 + [10]*3 + [5]*3
+
+	def increaseConnectionWeightForIndex(self, index):
+		percent = 1 + self.weightIncreasePercentage[index]/100
+		self.weight *= 1 + percent
+		self.weight = min(MaximumBranchSynapticWeight, self.weight)
+		self.history.append([{'connectionTime':0, 'changeMagnitude':percent}])
+		self.branchFiringSinceWeightChange = 0
+
+	def decreaseInactiveConnectionWeight(self):
+		# THE FOLLOWING CODE INCREASES branchFiringsSinceLastIncreaseInExcitatoryWeights IF THE CORRESPONDING CONNECTION 
+		# WEIGHT WAS NOT INCREASED (INDICATED BY branchFiringsSinceLastIncreaseInExcitatoryWeights NOT EQUAL TO 0). 
+		# NOTE THAT THE FIRST TIME THE BRANCH RECEIVES THE adjustWeightsOfRecentlyActiveInputs MESSAGE, THE ELEMENT IN 
+		# branchFiringsSinceLastIncreaseInExcitatoryWeights CORRESPONDING WITH INPUTS THAT WERE NOT RECENTLY ACTIVE IS 
+		# SET AT 2. SUBSEQUENT TIMES IT IS INCREASED BY 1
+		if self.branchFiringSinceWeightChange > 0:
+			self.branchFiringSinceWeightChange += 1
+		if self.branchFiringSinceWeightChange > BranchFiringsToDecreaseInSynapticWeights:
+			self.weight /= 1.1
+		if self.weight < 1:
+			self.deleteMe = True
+
+	def receiveBackPropogation(self):
+		# THE FOLLOWING CODE IS ONLY INVOKED THE FIRST TIME THE BRANCH RECEIVES A BACKPROPAGATING ACTION 
+		# POTENTIAL. THE CODE SETS ALL THE ELEMENTS IN branchFiringsSinceLastIncreaseInExcitatoryWeights TO 1."
+		if not self.backpropagatingActionPotentialRecieved:
+			self.branchFiringSinceWeightChange = 1
+			self.backpropagatingActionPotentialRecieved = True
+
+class RecordingManagementInputs:
+
+	def __init__(self, connection, conditionWeight):
+		self.value = connection
+		self.conditionWeight = conditionWeight
+		self.recentActivityOfCondition = 0
+	
+	def adjustWeightForHippocampus(self):
+		self.conditionWeight *= HippocampalWeightReductionFactor
+
 	

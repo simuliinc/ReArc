@@ -28,7 +28,7 @@ class ApicalDendrite:
 	def addNewProximalInputWeight(self, weight):
 		self.proximalInputWeights.append(weight)
 
-	def presentInputs(self, excitatoryInputs, modulatoryInputs):
+	def presentInputs(self, excitatoryInputs, modulatoryInputs, multipleInputs = False):
         #MODULATORY INPUTS CAN BE EXCITATORY OR INHIBITORY, DEPENDING ON
         #THE PROXIMAL INPUT WEIGHTS WITHIN THE TARGET APICAL DENDRITE INSTANCE
 
@@ -44,7 +44,11 @@ class ApicalDendrite:
         #INTO THE apicalDendrite. IF SO, INCREASE THE potentialRecord ACCORDINGLY"
 
 		for branch in self.distalBranches:
-			if branch.presentSingleSourceExcitatoryInputsToBranch(excitatoryInputs):
+			if multipleInputs:
+				injectsPotential = branch.presentMultipleSourceExcitatoryInputsToBranch(excitatoryInputs)
+			else:
+				injectsPotential = branch.presentSingleSourceExcitatoryInputsToBranch(excitatoryInputs)
+			if injectsPotential:
 				self.potentialRecord.advanceExcitatoryPotential()
         
 		# ADD POTENTIAL INJECTED BY MODULATORY PROXIMAL INPUTS TO potentialRecord. 
@@ -63,6 +67,44 @@ class ApicalDendrite:
 			self.potentialRecord.reset()
 
 		# IF ANY BRANCH HAS <3 INPUTS, REMOVE IT"
+		if multipleInputs:
+			self.distalBranches = list(itertools.filterfalse(lambda x: totalLen(x.excitatoryInputs) < 3, self.distalBranches))
+		else:
+			self.distalBranches = list(itertools.filterfalse(lambda x: len(x.excitatoryInputs) < 3, self.distalBranches))
+
+		return self.firingStatus
+	
+
+def presentRecordingManagementInputs(self, excitatoryInputs, recordManagementInputs):
+        #MODULATORY INPUTS CAN BE EXCITATORY OR INHIBITORY, DEPENDING ON
+        #THE PROXIMAL INPUT WEIGHTS WITHIN THE TARGET APICAL DENDRITE INSTANCE
+
+        #FIRST STEP IS TO SHIFT potentialRecord ALONG ONE TIMESLOT
+		self.potentialRecord.shift()
+        
+		currentPotential = self.potentialRecord[0]
+		firingProbability = 1000 * ((currentPotential - self.threshold)/self.threshold)
+		emptyBranches = []
+		currentLargest = None
+        
+        #GO THROUGH EACH BRANCH AND DETERMINE WHETHER IT INJECTS POTENTIAL
+        #INTO THE apicalDendrite. IF SO, INCREASE THE potentialRecord ACCORDINGLY"
+
+		for branch in self.distalBranches:
+			if branch.presentRecordManagementToBranch(excitatoryInputs, recordManagementInputs):
+				self.potentialRecord.advanceExcitatoryPotential()
+        
+		# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 
+		# THAN OR EQUAL TO THRESHOLD, AT 100% IF POTENTIAL IS 10% OR MORE OVER 
+		# THRESHOLD. SCALED BETWEEN 10% AND 100% PROBABILITIES WHEN POTENTIAL 
+		# IS 1% TO 10% OVER THRESHOLD" 
+		self.firingStatus = self.potentialRecord.fireforThreshold(self.threshold)
+		if self.firingStatus:
+			# IF apicalDendrite FIRES, SET potentialRecord TO ZERO
+			self.potentialRecord.reset()
+
+		# IF ANY BRANCH HAS <3 INPUTS, REMOVE IT"
+		
 		self.distalBranches = list(itertools.filterfalse(lambda x: len(x.excitatoryInputs) < 3, self.distalBranches))
 
 		return self.firingStatus
