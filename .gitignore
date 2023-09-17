@@ -2,3 +2,4 @@
 # big for githubExtension App-fil
 *.image
 *.changes
+*.pyc

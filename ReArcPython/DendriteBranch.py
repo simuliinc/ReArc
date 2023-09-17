@@ -17,8 +17,6 @@ class DendriteBranch:
 		self.inhibitoryInputWeights = []
 		self.recentActivityOfInhibitoryInputs = []
 		self.conditionRecordingManagementInputs = []
-		self.conditionRecordingManagementInputWeights = []
-		self.recentActivityOfConditionRecordingManagementInputs = []
 		self.timeSinceLastActivityOfBranch = 100
 		self.timeSinceBackpropagatedSomaActionPotential = 100
 		self.potentialRecord = PotentialRecord()
@@ -27,7 +25,7 @@ class DendriteBranch:
 		self.branchFirings = 0
 
     
-	def presentSingleSourceExcitatoryInputsToBranch(self, inputs):
+	def presentExcitatoryInputsToBranch(self, inputs, multipleSource = False, managementInputs=[]):
         #FIRST STEP IS TO SHIFT potentialRecord ALONG ONE TIMESLOT
 		self.potentialRecord.shift()
 
@@ -56,7 +54,7 @@ class DendriteBranch:
 			input.makeHighContributionPermanent()
 
 			# NEXT, INCREASE recentActivityOfExcitatoryInputs BY ONE FOR EACH INPUT"
-			self.recentActivity += 1
+			input.recentActivity += 1
 
 			# GO THROUGH THE excitatoryInputs OF THE BRANCH, AND CHECK IF THERE IS 
 			# AN ACTION POTENTIAL FOR THAT INPUT. IF SO, SET TIME SINCE INPUT FOR 
@@ -67,22 +65,31 @@ class DendriteBranch:
 				input.recentActivity = 0
 				self.potentialRecord.adjustPotentialByWeight(input.weight)
 
-			# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 
-			# THAN OR EQUAL TO THRESHOLD, AT 100% IF POTENTIAL IS 10% OR MORE OVER 
-			# THRESHOLD. SCALED BETWEEN 10% AND 100% PROBABILITIES WHEN POTENTIAL 
-			# IS 1% TO 10% OVER THRESHOLD see PotentialRecord.py
+		
+		# GO THROUGH THE conditionRecordingManagementInputs AND CHECK IF THERE IS AN 
+		# ACTION POTENTIAL FOR THAT INPUT. IF SO, INCREMENT ALL THE FIELDS OF potentialRecord
+		
+		if len(managementInputs):
+			for input in self.conditionRecordingManagementInputs:
+				if managementInputs[input.value] == 1:
+					self.potentialRecord.adjustPotentialByWeight(input.conditionWeight)
 
-			# IntegerCollection CONTAINS THE NUMBERS 0 TO 99. A NUMBER IS SELECTED 
-			# AT RANDOM FROM IntegerCollection AND IF IT IS LESS THAN firingProbability 
-			# THE BRANCH IF FIRING. THIS ALGORITHM IMPLEMENTS THE % PROBABILITY 
-			# DETERMINED BY firingProbability
+		# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 
+		# THAN OR EQUAL TO THRESHOLD, AT 100% IF POTENTIAL IS 10% OR MORE OVER 
+		# THRESHOLD. SCALED BETWEEN 10% AND 100% PROBABILITIES WHEN POTENTIAL 
+		# IS 1% TO 10% OVER THRESHOLD see PotentialRecord.py
 
-			if self.potentialRecord.fireforThreshold(self.threshold):
-				# IF BRANCH FIRES, SET potentialRecord AND timeSinceLastActivityOfBranch TO ZERO
-				self.firingStatus = True
-				self.potentialRecord.reset()
-				self.timeSinceLastActivityOfBranch = 0
-				self.branchFirings += 1
+		# IntegerCollection CONTAINS THE NUMBERS 0 TO 99. A NUMBER IS SELECTED 
+		# AT RANDOM FROM IntegerCollection AND IF IT IS LESS THAN firingProbability 
+		# THE BRANCH IF FIRING. THIS ALGORITHM IMPLEMENTS THE % PROBABILITY 
+		# DETERMINED BY firingProbability
+
+		if self.potentialRecord.fireforThreshold(self.threshold):
+			# IF BRANCH FIRES, SET potentialRecord AND timeSinceLastActivityOfBranch TO ZERO
+			self.firingStatus = True
+			self.potentialRecord.reset()
+			self.timeSinceLastActivityOfBranch = 0
+			self.branchFirings += 1
 
 		return self.firingStatus
 
@@ -97,6 +104,9 @@ class DendriteBranch:
 		#
 		self.managementInputs.append(RecordingManagementInputs(connection, CorticalConditionRecordingManagementInputWeight))
 
+	def reduceSynapticWeights(self, proportion):
+		for input in self.excitatoryInputs:
+			input.reduceSynapticWeight(proportion)
 
 	def addExcittatoryInput(self, connection):
 		# Adds a connection identity (connection) to excitatoryInputs, makes the corresponding connection weight 
@@ -135,8 +145,7 @@ class DendriteBranch:
 		# When a weight reaches its maximum and is confirmed at that maximum, there will be no further changes. This will 
 		# be achieved by setting its corresponding lastIncreaseInExcitatoryWeights element to false.
 		
-		input = self.excitatoryInputs[source]
-		input.input = connection
+		input = ExcitatoryInput(connection, source)
 		input.weight = 1
 		input.recentActivity = 100
 		input.branchFiringSinceWeightChange = True
@@ -162,8 +171,12 @@ class DendriteBranch:
 		input.recentActivity = 100
 		input.branchFiringSinceWeightChange = True
 		self.conditionPermanence = False
-
-	def adjustWeightsOfRecentlyActiveInputs(self):
+	
+	def adjustWeightsOfRecentlyActiveMultipleSourceInputs(self, numberOfSources):
+		for source in range(1, numberOfSources):
+			self.adjustWeightsOfRecentlyActiveInputs(True, source)
+	
+	def adjustWeightsOfRecentlyActiveInputs(self, multipleSources = False, source=None):
 
 		# NOTE MARCH 10th 2008:
 		# MAY NEED TO REVERSE INCREASE IF DOES NOT REPEAT WITHIN, SAY, 100 MSEC. IN OTHER WORDS, 
@@ -200,8 +213,13 @@ class DendriteBranch:
 	
 				# THE FOLLOWING CODE IS ONLY INVOKED THE FIRST TIME THE BRANCH RECEIVES A BACKPROPAGATING ACTION 
 				# POTENTIAL. THE CODE SETS ALL THE ELEMENTS IN branchFiringsSinceLastIncreaseInExcitatoryWeights TO 1."
+				if multipleSources: 
+					inputs = self.excitatoryInputsForSoruce(source)
+				else: 
+					inputs = self.excitatoryInputs
+
 				i = 0
-				for input in self.excitatoryInputs:
+				for input in inputs:
 					input.receiveBackPropogation()
 					
 					# THE FOLLOWING CODE INCREASES THE CONNECTION WEIGHT IF THE INPUT HAS BEEN ACTIVE SHORTLY BEFORE 
@@ -223,16 +241,22 @@ class DendriteBranch:
 				# THE FOLLOWING CODE REMOVES ALL THE CONNECTIONS SET AT false (now marked as deleteMe RJT) BECAUSE THEIR INPUT 
 				# WEIGHT WAS <= 1 AFTER 10 INCREASES IN ACTIVE BRANCH WEIGHTS. 
 				self.excitatoryInputs = list(itertools.filterfalse(lambda x: x.excitatoryInputs.deleteMe, self.excitatoryInputs))
-
-				for recordingManagementInput in self.conditionRecordingManagementInputs:
-					# THIS CODE DECREASES THE WEIGHT OF THE HIPPOCAMPAL INPUTS
-					recordingManagementInput.adjustWeightForHippocampus()
-
 				
+				# Multiple Sources do not adjust the Hippocampus
+				if not multipleSources:
+					for recordingManagementInput in self.conditionRecordingManagementInputs:
+						# THIS CODE DECREASES THE WEIGHT OF THE HIPPOCAMPAL INPUTS
+						recordingManagementInput.adjustWeightForHippocampus()
+
+	def excitatoryInputsForSoruce(self, source):
+		inputs = list(filter(lambda x: (x.source == source), self.excitatoryInputs))	
+
+
 
 class ExcitatoryInput:
-	def __init__(self, input):
+	def __init__(self, input, source=1):
 		self.input = input
+		self.source = source # use this index to identify multiple sources of inputs being processed
 		self.weight = CorticalConditionDefiningInputWeight
 		self.recentActivity = 0
 		self.connectionTime = 0
@@ -309,6 +333,9 @@ class ExcitatoryInput:
 			self.weight /= 1.1
 		if self.weight < 1:
 			self.deleteMe = True
+
+	def reduceSynapticWeight(self, proportion):
+		self.weight *= proportion
 
 	def receiveBackPropogation(self):
 		# THE FOLLOWING CODE IS ONLY INVOKED THE FIRST TIME THE BRANCH RECEIVES A BACKPROPAGATING ACTION 

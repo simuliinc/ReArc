@@ -28,7 +28,7 @@ class ApicalDendrite:
 	def addNewProximalInputWeight(self, weight):
 		self.proximalInputWeights.append(weight)
 
-	def presentInputs(self, excitatoryInputs, modulatoryInputs, multipleInputs = False):
+	def presentInputs(self, excitatoryInputs, modulatoryInputs, multipleSource = False, managementInputs=[]):
         #MODULATORY INPUTS CAN BE EXCITATORY OR INHIBITORY, DEPENDING ON
         #THE PROXIMAL INPUT WEIGHTS WITHIN THE TARGET APICAL DENDRITE INSTANCE
 
@@ -44,56 +44,18 @@ class ApicalDendrite:
         #INTO THE apicalDendrite. IF SO, INCREASE THE potentialRecord ACCORDINGLY"
 
 		for branch in self.distalBranches:
-			if multipleInputs:
-				injectsPotential = branch.presentMultipleSourceExcitatoryInputsToBranch(excitatoryInputs)
-			else:
-				injectsPotential = branch.presentSingleSourceExcitatoryInputsToBranch(excitatoryInputs)
-			if injectsPotential:
+			if branch.presentExcitatoryInputsToBranch(excitatoryInputs, multipleSource, managementInputs):
 				self.potentialRecord.advanceExcitatoryPotential()
         
 		# ADD POTENTIAL INJECTED BY MODULATORY PROXIMAL INPUTS TO potentialRecord. 
 		# NOTE: USING SAME POTENTIAL DECAY CURVE AS FOR APICAL DENDRITE BRANCHES"
-		for proximalnput, proximalWeight in zip(self.proximalInputs, self.proximalInputWeights):
-			if modulatoryInputs[proximalnput] == 1:
-				self.potentialRecord.adjustPotentialByWeight(proximalWeight)
-				
-		# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 
-		# THAN OR EQUAL TO THRESHOLD, AT 100% IF POTENTIAL IS 10% OR MORE OVER 
-		# THRESHOLD. SCALED BETWEEN 10% AND 100% PROBABILITIES WHEN POTENTIAL 
-		# IS 1% TO 10% OVER THRESHOLD" 
-		self.firingStatus = self.potentialRecord.fireforThreshold(self.threshold)
-		if self.firingStatus:
-			# IF apicalDendrite FIRES, SET potentialRecord TO ZERO
-			self.potentialRecord.reset()
-
-		# IF ANY BRANCH HAS <3 INPUTS, REMOVE IT"
-		if multipleInputs:
-			self.distalBranches = list(itertools.filterfalse(lambda x: totalLen(x.excitatoryInputs) < 3, self.distalBranches))
-		else:
-			self.distalBranches = list(itertools.filterfalse(lambda x: len(x.excitatoryInputs) < 3, self.distalBranches))
-
-		return self.firingStatus
-	
-
-def presentRecordingManagementInputs(self, excitatoryInputs, recordManagementInputs):
-        #MODULATORY INPUTS CAN BE EXCITATORY OR INHIBITORY, DEPENDING ON
-        #THE PROXIMAL INPUT WEIGHTS WITHIN THE TARGET APICAL DENDRITE INSTANCE
-
-        #FIRST STEP IS TO SHIFT potentialRecord ALONG ONE TIMESLOT
-		self.potentialRecord.shift()
-        
-		currentPotential = self.potentialRecord[0]
-		firingProbability = 1000 * ((currentPotential - self.threshold)/self.threshold)
-		emptyBranches = []
-		currentLargest = None
-        
-        #GO THROUGH EACH BRANCH AND DETERMINE WHETHER IT INJECTS POTENTIAL
-        #INTO THE apicalDendrite. IF SO, INCREASE THE potentialRecord ACCORDINGLY"
-
-		for branch in self.distalBranches:
-			if branch.presentRecordManagementToBranch(excitatoryInputs, recordManagementInputs):
-				self.potentialRecord.advanceExcitatoryPotential()
-        
+		if len(managementInputs) > 0:  # this guard is here because on the management Inputs this code wasn't called
+									   # if this code should be called when management Inputs are present remove 
+									   # this guard (RJT)
+			for proximalnput, proximalWeight in zip(self.proximalInputs, self.proximalInputWeights):
+				if modulatoryInputs[proximalnput] == 1:
+					self.potentialRecord.adjustPotentialByWeight(proximalWeight)
+					
 		# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 
 		# THAN OR EQUAL TO THRESHOLD, AT 100% IF POTENTIAL IS 10% OR MORE OVER 
 		# THRESHOLD. SCALED BETWEEN 10% AND 100% PROBABILITIES WHEN POTENTIAL 
