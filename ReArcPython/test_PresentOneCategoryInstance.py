@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import random
-import testcode
+import PresentOneCategoryInstance
 
 
 class TestSpikeEvaluator(unittest.TestCase):
@@ -12,7 +12,7 @@ class TestSpikeEvaluator(unittest.TestCase):
         cls.phaseAtInitialTimeslot = 23
         cls.modulationProbabilityFactor = [0, 0, 0, 0, 0, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 12.8, 6.4, 3.2, 1.6, 0.8, 0.4, 0.2, 0, 0, 0, 0, 0]
         cls.integerCollectionForInputStateGeneration = np.arange(10000)
-        cls.evaluator = testcode.SpikeEvaluator(cls.currentTimeslot, cls.phaseAtInitialTimeslot, cls.modulationProbabilityFactor, cls.integerCollectionForInputStateGeneration)
+        cls.evaluator = PresentOneCategoryInstance.SpikeEvaluator(cls.currentTimeslot, cls.phaseAtInitialTimeslot, cls.modulationProbabilityFactor, cls.integerCollectionForInputStateGeneration)
 
     def test_getCurrentPhase(self):
         self.assertEqual(TestSpikeEvaluator.evaluator.getCurrentPhase(), TestSpikeEvaluator.phaseAtInitialTimeslot)
