@@ -11,6 +11,7 @@ MaximumBranchSynapticWeight = 3.2 # used to limit the weights of Dendrite Branch
 HippocampalWeightReductionFactor = 0.9999 # used in ConditionalRecordingManagementInputWeights of DendriteBranch
 BranchFiringsToDecreaseInSynapticWeights = 4 # used in DendrichBranch >> adjustWeightsOfRecentlyActiveInputs
 ModulationProbabilityFactor = [0]*75
+IntegerCollectionSizeForInputStateGeneration = 10000
 
 def setModulationProbabilityFactor():
 	startPosition = 11

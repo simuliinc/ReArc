@@ -20,6 +20,7 @@ class SpikeEvaluator():
                 self.defineAvailableProbabilities()
                 self.defineObjectCategories()
                 self.inputs = []
+                
         def defineAvailableProbabilities(self):
                 """ add integers 1 to 40, 5 times
                                  41 to 89, 4 times ...
@@ -94,19 +95,19 @@ class SpikeEvaluator():
 
 
 ## Evaluation run code
-currentTimeslot = 0
-phaseAtInitialTimeslot = 23
-modulationProbabilityFactor = [0, 0, 0, 0, 0, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 12.8, 6.4, 3.2, 1.6, 0.8, 0.4, 0.2, 0, 0, 0, 0, 0]
-integerCollectionForInputStateGeneration = np.arange(10000)
+# currentTimeslot = 0
+# phaseAtInitialTimeslot = 23
+# modulationProbabilityFactor = [0, 0, 0, 0, 0, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 12.8, 6.4, 3.2, 1.6, 0.8, 0.4, 0.2, 0, 0, 0, 0, 0]
+# integerCollectionForInputStateGeneration = np.arange(10000)
 
-evaluator = SpikeEvaluator(currentTimeslot, phaseAtInitialTimeslot, modulationProbabilityFactor, integerCollectionForInputStateGeneration)
-inputSourceCategories = np.empty((30,400))
-for i in range(30):
-        inputSourceCategories[i]= evaluator.getSpikesInNextTimeslot(i)
-        j = 0
-        for value in inputSourceCategories[i]:
-                if value > 0:
-                         print('Category Collection Number'+str(i))
-                         print(str(j)+': '+str(value)+' ')
-                j += 1
+# evaluator = SpikeEvaluator(currentTimeslot, phaseAtInitialTimeslot, modulationProbabilityFactor, integerCollectionForInputStateGeneration)
+# inputSourceCategories = np.empty((30,400))
+# for i in range(30):
+#         inputSourceCategories[i]= evaluator.getSpikesInNextTimeslot(i)
+#         j = 0
+#         for value in inputSourceCategories[i]:
+#                 if value > 0:
+#                          print('Category Collection Number'+str(i))
+#                          print(str(j)+': '+str(value)+' ')
+#                 j += 1
 
