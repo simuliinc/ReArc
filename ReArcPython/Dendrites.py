@@ -15,6 +15,10 @@ class ApicalDendrite:
 		self.threshold = None  #CorticalApicalDendriteThreshold
 		self.firingStatus = False
 
+	def adjustWeightsOfRecentlyActiveInputs(self, multipleSources = False, source=None):
+		for branch in self.distalBranches:
+			branch.adjustWeightsOfRecentlyActiveInputs(multipleSources, source)
+
 	def changeBranchThresholds(self, newThreshold):
 		for branch in self.distalBranches:
 			branch.changeBranchThreshold(newThreshold)
@@ -27,6 +31,10 @@ class ApicalDendrite:
 
 	def addNewProximalInputWeight(self, weight):
 		self.proximalInputWeights.append(weight)
+
+	def reduceSynapticWeights(self, proportion):
+		for branch in self.distalBranches:
+			branch.reduceSynapticWeight(proportion)
 
 	def presentInputs(self, excitatoryInputs, modulatoryInputs, multipleSource = False, managementInputs=[]):
         #MODULATORY INPUTS CAN BE EXCITATORY OR INHIBITORY, DEPENDING ON

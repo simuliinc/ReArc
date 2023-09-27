@@ -12,6 +12,11 @@ HippocampalWeightReductionFactor = 0.9999 # used in ConditionalRecordingManageme
 BranchFiringsToDecreaseInSynapticWeights = 4 # used in DendrichBranch >> adjustWeightsOfRecentlyActiveInputs
 ModulationProbabilityFactor = [0]*75
 IntegerCollectionSizeForInputStateGeneration = 10000
+BDNFincrementPerFiring = 0.5
+BDNFdecrementFollowingWeightReduction = 1
+BDNFconcentrationReductionPerTimeslot = 0.9999
+BDNFconcentrationThresholdForReductionInSynapticWeights = 17.5
+FrequentFiringReductionInSynapticWeightsProportion = 0.9
 
 def setModulationProbabilityFactor():
 	startPosition = 11
