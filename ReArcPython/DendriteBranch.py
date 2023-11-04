@@ -7,10 +7,11 @@
 from Globals import *
 from PotentialRecord import *
 import itertools
+import random
 
 class DendriteBranch:
 
-	def __init__(self, threshold):
+	def __init__(self, threshold, numOfInputs, inputs, source, managementInputs):
 		self.conditionPermanence = False
 		self.excitatoryInputs = []
 		self.inhibitoryInputs = []
@@ -23,6 +24,14 @@ class DendriteBranch:
 		self.threshold = threshold
 		self.firingStatus = False
 		self.branchFirings = 0
+		for i in range(numOfInputs):
+			if source:
+				self.addExcitatoryInputFromSource(random.choice(inputs), random.choice(source))
+			else:
+				self.addExcitatoryInput(random.choice(inputs))
+		if managementInputs:
+			for i in range(managementInputs):
+				self.addConditionRecordingManagementInput(i)
 
     
 	def presentExcitatoryInputsToBranch(self, inputs, multipleSource = False, managementInputs=[]):
@@ -108,7 +117,7 @@ class DendriteBranch:
 		for input in self.excitatoryInputs:
 			input.reduceSynapticWeight(proportion)
 
-	def addExcittatoryInput(self, connection):
+	def addExcitatoryInput(self, connection):
 		# Adds a connection identity (connection) to excitatoryInputs, makes the corresponding connection weight 
 		# 10 in excitatoryInputWeights, and makes the time since the input was last active 100 timeslots in 
 		# recentActivityOfExcitatoryInputs.  
@@ -254,10 +263,11 @@ class DendriteBranch:
 
 
 class ExcitatoryInput:
-	def __init__(self, input, source=1):
+	def __init__(self, input, weight=CorticalConditionDefiningInputWeight, source=0):
+		# use zero starting index to match Python collections (RJT)
 		self.input = input
 		self.source = source # use this index to identify multiple sources of inputs being processed
-		self.weight = CorticalConditionDefiningInputWeight
+		self.weight = weight
 		self.recentActivity = 0
 		self.connectionTime = 0
 		self.changeMagnitude = 0

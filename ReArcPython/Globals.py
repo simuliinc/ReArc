@@ -17,6 +17,58 @@ BDNFdecrementFollowingWeightReduction = 1
 BDNFconcentrationReductionPerTimeslot = 0.9999
 BDNFconcentrationThresholdForReductionInSynapticWeights = 17.5
 FrequentFiringReductionInSynapticWeightsProportion = 0.9
+LayerOneInterneuronThreshold = 600 # Used in InhibitoryInterneuron
+NumberOfColumns = 15 # Used in HippocampaalSystemBlackBox and Brain and OrderedCollection Overrides
+NumberOfLayerOneInterneurons = 10
+RecordingManagementInputsPerTimeslot = [] # Used in Brain
+
+#Start Used in Brain >> configurefirstArea
+PyramidalsPerColumnLayerOne = 10 
+PyramidalsPerColumnLayerTwo = 10
+PyramidalsPerColumnLayerThree = 1
+NumberOfLayerOneInterneurons = 10
+NumberOfLayerTwoInterneurons = 10
+LayerOneInterneuronThreshold = 600
+LayerTwoInterneuronThreshold = 600
+LayerOneInterneuronInputSynapticStrengths = 1
+InputSpaceSize = 400
+BiasOnFavouredInputs = 3
+NumberOfBranchesPerLayerOnePyramidal = 50
+NumberOfBranchesPerLayerTwoPyramidal = 10
+NumberOfBranchesPerLayerThreePyramidal = 10
+NumberOfConditionDefiningInputsPerCorticalLayerOneBranch = 20
+NumberOfConditionDefiningInputsPerCorticalLayerTwoBranch = 15
+NumberOfConditionDefiningInputsPerCorticalLayerThreeBranch = 15
+NumberOfInputsToLayerOneInterneuronsFromEachOtherColumn = 20
+NumberOfInputsToLayerOneInterneuronsFromOwnColumn = 10
+NumberOfInputsToLayerTwoInterneuronsFromEachOtherColumn = 0
+NumberOfInputsToLayerTwoInterneuronsFromOwnColumn = 20
+DendriticBranchThresholdLayerOne = 450
+DendriticBranchThresholdLayerTwo = 450
+DendriticBranchThresholdLayerThree = 200
+InitialLayerThreeSynapticWeight = 1.0
+CorticalLayerThreeBasalDendriteThreshold = 700
+#End Used in Brain >> configurefirstArea 
+
+# Start Brain >> presentDoubleCategoryInstanceWithSecondCategory
+X = None # this should be an instance of Brain
+Y = []
+Z = []
+PresentationResults = []
+# End Brain >> presentDoubleCategoryInstanceWithSecondCategory
+
+
+#Start Used in Brain >> configureSecondArea  This method appears to not be used in Smalltalk.
+NumberOfColumnsArea2 = 10
+SelectedSubsets = None  # This was not set in Smalltalk.  The method configureSecondArea was not called in Smalltalk
+						# It is not clear what SelectedSubsets should be set to but it may be simular to 
+						# favored Inputs.  See test_brain.py for an example of favoredInpus
+InitialBiasOnSelectedColumns = None # This was not set in Smalltalk.  The method configureSecondArea was not 
+									#called in Smalltalk It is not clear what InitialBiasOnSelectedColumns should be set to 
+									# but it may be simular to BiasOnFavouredInputs.  
+									# See above where BiasOnFavouredInputs = 3 and Brain.py Brain >> configureFirstArea 
+									# for an example of how BiasOnFavouredInputs is used
+#End Used in Brain >> configureSecondArea
 
 def setModulationProbabilityFactor():
 	startPosition = 11

@@ -5,9 +5,10 @@ from Dendrites import *
 
 class PyramidalNeuron:
 
-	def __init__(self):
+	def __init__(self, numOfBasilDendriteBranches, threshold, numOfInputs, inputs, source=None, managementInputs=0):
 		self.apicalDendrite = ApicalDendrite()
-		self.basalDendrite = BasilDendrite()
+		self.basalDendrite = BasilDendrite(numOfBasilDendriteBranches, threshold, numOfInputs, \
+									  inputs, source, managementInputs)
 		self.potentialRecord = PotentialRecord()
 		self.timeSincePreviousFiring = 48
 		self.threshold = CorticalBasalDendriteThreshold
@@ -56,6 +57,10 @@ class PyramidalNeuron:
 
 	def reduceSynapticWeights(self, proportion):
 		self.basilDendrite.reduceSynapticWeights(proportion)
+
+	def changeBasilDendriteThresholds(self, newBranchThreshold):
+		self.basalDendrite.changeBranchThresholds()
+
 
 	def updatePotentialRecord(self, spike):
 		assert False, "This method is currently not used, if you want to use this method remove this assert"

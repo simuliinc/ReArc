@@ -4,15 +4,15 @@ import random
 
 class InputState:
 
-	def __init__(self):
-		self.category = []
+	def __init__(self, category):
+		self.category = category
 		self.phaseAtInitialTimeslot = 23
 		self.currentTimeslot = 0
 		self.currentPhase = 0
 		self.secondCateogry = []
 
 	def getSpikesInNextTimeslot(self, secondCategory = [], thirdCategory = []):
-	# Returns the identities of the inputs that contain an action potential spike in the next timeslot"
+		# Returns the identities of the inputs that contain an action potential spike in the next timeslot"
 
 		spikes = [0]*len(self.category)
 		if len(secondCategory):
