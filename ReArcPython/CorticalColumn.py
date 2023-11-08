@@ -21,6 +21,7 @@ class CorticalColumn:
 		# this is as far down as the corticalLayer information is pushed. From here down everything is specific 
 		# to the layer presened here.  The nurons, dendrites, and branches do not have a concept of cortical 
 		# layer (RJT)
+		assert threshold != None
 		neuron = PyramidalNeuron(config['numOfBasilDendriteBranches'], config['dendriteThreshold'], \
 						   config['numOfInputs'], config['inputs'], config['source'], config['managementInputs'])
 		self.getLayer(corticalLayer).pyramidalNeurons.append(neuron)
@@ -96,16 +97,17 @@ class CorticalColumn:
 
 		for corticalLayerNumber in range(1,4):
 			corticalLayer = self.getLayer(corticalLayerNumber)
-			previousLayer = self.getLayer(max(corticalLayer - 1, 1))
+			previousLayer = self.getLayer(max(corticalLayerNumber - 1, 1))
 			for neuron in corticalLayer.pyramidalNeurons:
 				if corticalLayerNumber == 1:
 					corticalLayer.pyramidalActivity.append(neuron.presentInputs(conditionDefiningInputs, corticalLayer.interneuronsActivity, multipleSource))
 				elif corticalLayerNumber == 2:
-					corticalLayer.pyramidalActivity.append(neuron.presentInputs(previousLayer.pyramidalActivity, corticalLayer.interneuronActivity))
+					corticalLayer.pyramidalActivity.append(neuron.presentInputs(previousLayer.pyramidalActivity, corticalLayer.interneuronsActivity))
 				elif corticalLayerNumber == 3:
 					corticalLayer.pyramidalActivity.append(neuron.presentInputs(previousLayer.pyramidalActivity, [], False, managementInputs))
 				else:
 					assert False, "we currently only suport 3 layers"
+				assert corticalLayer.pyramidalActivity[-1] != None
 
 		return list(map( lambda x : x.pyramidalActivity, self.layers))
 	

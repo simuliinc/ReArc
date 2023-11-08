@@ -53,7 +53,7 @@ class PyramidalNeuron:
 					self.synapticWeightReductionTendency -= BDNFdecrementFollowingWeightReduction
 				self.synapticWeightReductionTendency *= BDNFconcentrationReductionPerTimeslot
 
-			return int(self.firingStatus)
+		return int(self.firingStatus)
 
 	def reduceSynapticWeights(self, proportion):
 		self.basilDendrite.reduceSynapticWeights(proportion)

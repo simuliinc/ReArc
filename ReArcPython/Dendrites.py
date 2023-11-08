@@ -14,7 +14,7 @@ class ApicalDendrite:
 		self.distalBranches = []
 		self.addDendriteBranches(numOfBranches, threshold, numOfInputs, inputs, source)
 		self.potentialRecord = PotentialRecord()
-		self.threshold = None  #CorticalApicalDendriteThreshold
+		self.threshold = threshold  #CorticalApicalDendriteThreshold
 		self.firingStatus = False
 
 	def adjustWeightsOfRecentlyActiveInputs(self, multipleSources = False, source=None):
@@ -93,6 +93,7 @@ class BasilDendrite(ApicalDendrite):
 	def __init__(self, numOfBranches = 0, threshold = CorticalBasalDendriteThreshold, numOfInputs = 0, \
 			  inputs = [], source = None, managementInputs = 0):
 		super().__init__(numOfBranches, threshold, numOfInputs, inputs, source, managementInputs)
+		assert self.threshold != None
 
 class InhibitoryInterneuron(ApicalDendrite):
 	def __init__(self, threshold = LayerOneInterneuronThreshold, numOfInputs = 0, inputs=[], source=None):
@@ -111,12 +112,12 @@ class InhibitoryInterneuron(ApicalDendrite):
 		# named differently in Basil Dendrite but functionally the same
 	#	self.proximalInputWeights.append(weight)
 
-	def presentInputs(self, currentInputs, multipleSource = False):
+	def presentInputs(self, currentInputs, modularyInputs = [], multipleSource = False, managmentInputs=[]):
 		# assert False, "this code is turned off because CortaclColumn >> updateLayerTwoInterneuronActivityInternalConnectivityOnly: is not sent"
 		# This method can work for multipleSource present inputs used by CorticalColumn >> updateLayerOneInterneuronActivity:
 		# the difference between the presentInputs on BasilDendrite is the dendriteBranches. Since there are no
 		# dendriteBranches on a InhibitoryIntterneuoron the code is the same (RNT)
 		# ADDS ONE TIMESLOT TO THE COUNT OF TIMESLOTS SINCE PREVIOUS FIRING
 		self.timeSincePreviousFiring += 1
-		super().presentInputs(self, currentInputs, [], multipleSource, [])		
+		super().presentInputs(currentInputs, modularyInputs, multipleSource, managmentInputs)		
 		return self.firingStatus

@@ -39,7 +39,7 @@ class DendriteBranch:
 		self.potentialRecord.shift()
 
         #NEXT, INCREASE timeSinceLastActivityOfBranch BY ONE
-		timeSinceLastActivityOfBranch += 1
+		self.timeSinceLastActivityOfBranch += 1
 
 		# NEXT, INCREASE THE NUMBER OF TIMESLOTS SINCE CHANGE 
 		# BY ONE FOR EVERY CHANGE TO EVERY INPUT.  THE CHANGE 
@@ -77,10 +77,9 @@ class DendriteBranch:
 		
 		# GO THROUGH THE conditionRecordingManagementInputs AND CHECK IF THERE IS AN 
 		# ACTION POTENTIAL FOR THAT INPUT. IF SO, INCREMENT ALL THE FIELDS OF potentialRecord
-		
 		if len(managementInputs):
 			for input in self.conditionRecordingManagementInputs:
-				if managementInputs[input.value] == 1:
+				if managementInputs[input.input] == 1:
 					self.potentialRecord.adjustPotentialByWeight(input.conditionWeight)
 
 		# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 

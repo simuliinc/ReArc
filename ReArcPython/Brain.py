@@ -161,7 +161,7 @@ class Brain:
 		recordingManagementInputs = self.hippocampus[cortexArea].popCurrentHippocampalOutputs()
 
 		# STEP TWO IS TO UPDATE CORTEX USING CURRENT SENSORY INPUTS AND PREVIOUS OUTPUTS FROM HIPPOCAMPUS
-		brainActivity = self.visualCortex[cortexArea].presentInputsInOneTimeslotToCorticalArea(excitatoryInputs, recordingManagementInputs, multipleSource = False)
+		brainActivity = self.visualCortex[cortexArea-1].presentInputsInOneTimeslotToCorticalArea(excitatoryInputs, recordingManagementInputs, multipleSource = False)
 
 		# this is a global variable, I'm not sure what its purpose is (RJT)
 		if shouldRecord:

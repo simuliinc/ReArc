@@ -14,8 +14,8 @@ class CorticalArea:
 	def addPyramidalToLayerQtyThreshold(self, corticalLayer, numberOfPyramidalsToAdd, \
 										threshold = CorticalBasalDendriteThreshold, inputs={}, source=None):
 		for i in range(numberOfPyramidalsToAdd):
-			for column in self.columns:
-				column.addPyramidalToLayer(corticalLayer, threshold, inputs, source)
+			for i, column in enumerate(self.columns):
+				column.addPyramidalToLayer(corticalLayer, threshold, inputs[i], source)
 
 	def addInterneuronToLayerWithThreshold(self, corticalLayer, numberOfInterneuronsToAdd, threshold):
 		for i in range(numberOfInterneuronsToAdd):
@@ -33,14 +33,14 @@ class CorticalArea:
 		# potential in the timeslot.
 		
 		self.currentOutputs = []	
-		for column, managementInput in zip(self.columns, recordingManagementInputs):
-			output = column.presentInputs(excitatoryInputs, managementInput, False, multipleSource)
+		for column in self.columns:
+			output = column.presentInputs(excitatoryInputs, recordingManagementInputs, False)
 			self.currentOutputs.append(output)
 			# Why this is possible? PyramidalActivy is added to the cortialLayer instead of collected in a layer collection 
 			# on the column. It is now possible to get that activy from presentInputs above directly from the CorticalLayer 
 			# and process it (RJT)
 			column.updateInterneuronActivityForLayer(1)
-			column.updateInterneuronActivityforLayer(2)
+			column.updateInterneuronActivityForLayer(2)
 			# We actually have 3 layers currently implemented but this layer is not called in Smalltalk. (RJT)
 			# column.updateInterneuronActivityForLayer(3)
 

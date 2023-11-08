@@ -31,6 +31,13 @@ class TestBrain(unittest.TestCase):
 
 	def testCategories(self):
 		assert len(TestBrain.evaluator.asInputState(1).category) == 400
- 
+
+	def testInputs(self):
+		inputs = TestBrain.evaluator.asInputState(1).getSpikesInNextTimeslot(TestBrain.evaluator.asInputState(2).category,TestBrain.evaluator.asInputState(3).category)
+		# the following is a collection of 15 collections of 3 elements with the first 2 having len of 40 and the 3rd len of 4
+		inputResult = TestBrain.brain.presentInputsInOneTimeslotToArea1WithBlackBoxHippocampus(inputs, 1, False)
+		assert (len(inputResult) == 15) & (len(inputResult[0]) == 3) & (len(inputResult[0][0]) == 10) & (len(inputResult[0][2]) == 1), "inputResult: len: "+str(len(inputResult))+" [0]: "+str(len(inputResult[0]))+" [0][0]: "+str(len(inputResult[0][0]))+" [0][2]: "+str(len(inputResult[0][2]))
+		
+
 if __name__ == '__main__':
     unittest.main()
