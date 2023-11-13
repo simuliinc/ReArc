@@ -213,17 +213,143 @@ class Brain:
 			# not sure what Z and Y are for (RJT)
 			Z.append(inputs)
 			Y.append(self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, 1, True))
-		
-		recentPresentationOutputs = Y[-599:]
-		
+		self.reportPresentationResults(Y[-599:])
+		self.nullOutInputs()
+
+	def nullOutInputs(self):
+		# The following code presents null inputs (no spikes) to brain for 25 milliseconds (75 timeslots)
+		# to ensure that previous presentation does not contribute to later presentation"
+		inputs = [0]*200
+		for i in range(75):			
+			self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, 1, False)
+
+	def reportPresentationResults(self, recentPresentationOutputs):	
 		PresentationResults.append([[self.totalAcrossTimeslots(recentPresentationOutputs, 1)], 
 							  [self.totalAcrossTimeslots(recentPresentationOutputs, 2)], 
 							  [self.totalAcrossTimeslots(recentPresentationOutputs, 3)]])  # 4th July 2015 <- no idea what this is (RJT)
 
 
-		#"The following code presents null inputs (no spikes) to brain for 25 milliseconds (75 timeslots) to ensure that previous presentation does not contribute to later presentation"
-		inputs = [0]*200
-		for i in range(75):			
-			self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, 1, False)
+	def presentOneCategoryInstance(self, categoryInputSource):
+		assert False, "this method wasn't used in Smalltalk"
+		#category is categoryInputSourceCategoryX
+		# Y stores outputs of all the columns. Z stores the inputs, but not the null inputs.
+		# PresentationRecord stores the total output spikes over one object presentation, 
+		# from each column separately 
 
+		for j in range(600):
+			inputs = categoryInputSource.getSpikesInNextTimeslot()
+			Z.append(inputs)
+
+			# the original Smalltalk code method Brain >> presentInputsInOneTimeslotToBrainWithBlackBoxHippocampus: 
+			# which implied recording = True but the code did not actually do 
+			# recording. I picked the intent here bassed on the name of the method had Andrew wanted
+			# to not record he would have used Brain >> 
+			# presentInputsInOneTimeslotToBrainWithBlackBoxHippocampusWithoutRecording:
+			Y.append(self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs,1,True))
 		
+		# The following code determines layer three outputs from each column in each modulation 
+		# period, ans adds the results to PresentationResults
+
+
+		currentPresentationOutputs = []
+		# these values do not match HippocampalSystemBlackBox >> constructMultiplexedOutputsForNext25milliseconds
+		# they also don't match he comments above each sectiion.
+		self.addModulationSlots(currentPresentationOutputs,0,21)
+		self.addModulationSlots(currentPresentationOutputs,27,45)
+		self.addModulationSlots(currentPresentationOutputs,48,71)
+		Y = []
+		self.nullOutInputs()
+
+
+	def addModulationSlots(self, currentPresentationOutputs, start, stop):
+		for j in range(8):
+			# modulation 1 - 10  (his appears to be 20 spots not 10 (RJT))
+			for k in range(75*j+start, 75*j + stop):  # 0 to 20 then 75 to 94 (inclusive) (RJT)
+				currentPresentationOutputs.append(Y[k])
+		PresentationResults.append(self.totalAcrossTimeslots(currentPresentationOutputs, 3))
+
+	def presentOneCategoryInstanceStoredInputs(self):
+		# category is categoryInputSourceCategoryX
+		# All inputs have previously been stored in Z, except null inputs between each presentation. 
+		# Y stores outputs of all the columns.
+		# PresentationRecord stores the total output spikes over one object presentation, from each 
+		# column separately 
+		assert False, "This code was not used in Smalltalk"
+		for j in range(600):
+			inputs = Z[InputNumber]  # InputNumber is a global that does not seem to be initialized in Smalltalk
+			InputNumber += 1
+			Y.append(self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs,1,True))
+		self.reportPresentationResults(Y[-599:])
+		self.nullOutInputs()
+
+	def presentTripleCategoryInstance(self, firstCategoryInputSource, secondCategoryInputSource, thirdCategoryInputSource,  cortexArea = 1, shouldRecord = False):
+		# category is categoryInputSourceCategoryX
+		# Y stores outputs of all the columns. Z stores the inputs, but not the null inputs.
+		# PresentationRecord stores the total output spikes over one object presentation, from each column separately 
+
+		# In 600 timeslots (200 msec) , there are 8 modulation periods of 75 timeslots (25 milliseconds). Each 
+		# of three category instrances are presented once in each modulation period (i.e. for about 
+		# 8 milliseconds). So a category instance is presented for a period of about 67 milliseconds
+
+		for i in range(600):
+			inputs = firstCategoryInputSource.getSpikesInNextTimeslot(secondCategoryInputSource, thirdCategoryInputSource)
+			Y.append(self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, cortexArea, shouldRecord))
+
+		# the following code totals spikes but is not used except to fill another global.
+		# The globals filling code was commented out.  Leaving this out for performance (RJT).
+
+		"""		
+				# Total spikes in Layer 3"
+				totalLayerThreeSpikesInTimeslot = self.totalAcrossTimeslots(recentPresentationOutputs, 1)
+				1 to: NumberOfColumns do: [:columns| 
+					totalLayerThreeSpikesInTimeslot := totalLayerThreeSpikesInTimeslot + ((((Y last) at: columns) at: 3) total). 
+							]. "END do columns"
+				"LayerThreeSpikesPerTimeslot addLast: (totalLayerThreeSpikesInTimeslot)."
+
+		"Total spikes in Layer 2"
+				totalLayerTwoSpikesInTimeslot := 0.
+				1 to: NumberOfColumns do: [:columns| 
+					totalLayerTwoSpikesInTimeslot := totalLayerTwoSpikesInTimeslot + ((((Y last) at: columns) at: 2) total). 
+							]. "END do columns"
+				"LayerTwoSpikesPerTimeslot addLast: (totalLayerTwoSpikesInTimeslot)."
+				
+		"Total spikes in Layer 1"
+				totalLayerOneSpikesInTimeslot := 0.
+				1 to: NumberOfColumns do: [:columns|
+					totalLayerOneSpikesInTimeslot := totalLayerOneSpikesInTimeslot + ((((Y last) at: columns) at: 1) total).  
+							]. "END do columns"
+				"LayerOneSpikesPerTimeslot addLast: (totalLayerOneSpikesInTimeslot)."
+				
+		"Total input spikes
+				InputSpikesPerTimeslot addLast: (inputs total)."
+		"""				
+
+		# The following code determines layer three outputs from each column in each modulation period, 
+		# and adds the results to PresentationResults.
+  	 	# NOTE that with setPhaseAtInitialTimeslot: 23, 
+		# layer 3 outputs for the firstCategoryInputSource appear in timeslots 1 - 21.
+		# layer 3 outputs for the secondCategoryInputSource appear in timeslots 48 - 71.
+		# layer 3 outputs for the thirdCategoryInputSource appear in timeslots 27 - 45.
+		# HENCE PresentationResults must capture results in that order to preserve the results in the same 
+		# order as the presentations.
+		self.reportPresentationResults(Y[-599:])
+
+		# Resetting of Y can be eliminated to capture all neuron activity in all timeslots. However, for a 
+		# long run this overloads the memory
+		Y = []
+
+		# YY addLast: (((hippocampus at: 1) showStrongActivityCount) deepCopy). 
+
+		# The following code zeroes strongActivityCount. If multiple groups of objects are presented to Area2 
+		# in different timeslots, this will require modification 
+		self.hippocampus[0].zeroStrongActivityCount()
+		self.hippocampus[1].zeroStrongActivityCount()
+
+	
+		# The following code presents null inputs (no spikes) to brain for 25 milliseconds (75 timeslots) to 
+		# ensure that previous presentation does not contribute to later presentation
+		self.nullOutInputs()
+
+	def sleep(self):
+		assert False, "This code would break with no cortiacal index if called and it doesn't appear to be called in Smalltalk"
+		self.visualCortex.sleep()
