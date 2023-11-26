@@ -51,6 +51,8 @@ class DendriteBranch:
 		# THE SECOND CONTAINS THE MAGNITUDE OF THE CHANGE.
 		
 		for input in self.excitatoryInputs:
+			# assert len(input.history) <= 3, "history is a collection of collections"
+			# print(str(input.history))
 			input.advanceTime()
 
 			# NEXT, IF MORE THAN 600 TIMESLOTS (= 200 MILLISECONDS) HAVE ELAPSED, 
@@ -69,12 +71,14 @@ class DendriteBranch:
 			# AN ACTION POTENTIAL FOR THAT INPUT. IF SO, SET TIME SINCE INPUT FOR 
 			# THAT INPUT TO ZERO, AND INCREMENT ALL THE FIELDS OF potentialRecord 
 			# FOR THE BRANCH"	See trace https://github.com/simuliinc/ReArc/issues/16
+			try: 
+				if (inputs[input.getInput()]) == 1:
+					input.recentActivity = 0
+					self.potentialRecord.adjustPotentialByWeight(input.weight)
+			except IndexError:
+				# self halt
+				pass
 
-			if (inputs[input.getInput()]) == 1:
-				input.recentActivity = 0
-				self.potentialRecord.adjustPotentialByWeight(input.weight)
-
-		
 		# GO THROUGH THE conditionRecordingManagementInputs AND CHECK IF THERE IS AN 
 		# ACTION POTENTIAL FOR THAT INPUT. IF SO, INCREMENT ALL THE FIELDS OF potentialRecord
 		if len(managementInputs):
@@ -248,7 +252,7 @@ class DendriteBranch:
 					
 				# THE FOLLOWING CODE REMOVES ALL THE CONNECTIONS SET AT false (now marked as deleteMe RJT) BECAUSE THEIR INPUT 
 				# WEIGHT WAS <= 1 AFTER 10 INCREASES IN ACTIVE BRANCH WEIGHTS. 
-				self.excitatoryInputs = list(itertools.filterfalse(lambda x: x.excitatoryInputs.deleteMe, self.excitatoryInputs))
+				self.excitatoryInputs = list(itertools.filterfalse(lambda x: x.deleteMe, self.excitatoryInputs))
 				
 				# Multiple Sources do not adjust the Hippocampus
 				if not multipleSources:
@@ -273,22 +277,25 @@ class ExcitatoryInput:
 		self.branchFiringSinceWeightChange = 0
 		self.backpropagatingActionPotentialRecieved = False
 		self.permanentConnection = False
-		self.history = [{'connectionTime':0, 'changeMagnitude':0}]
+		self.history = [{'connectionTime':0, 'changeMagnitude':1}]
 		self.weightIncreasePercentage=[]
 		self.initWeightIncreasePercentage()
 		self.deleteMe = False
 
 	def advanceTime(self):
 		self.connectionTime += 1
-		for item in self.history:
-			item["connectionTime"] += 1
+		# for item in self.history:
+		#	item['connectionTime'] += 1  # let's just keep track of time instead of changing it. (RJT)
 
 	def handleMaxTimeSlots(self):
 		# IF MORE THAN 600 TIMESLOTS (= 200 MILLISECONDS) HAVE ELAPSED, 
 		# REVERSE THE CHANGE AND DELETE THE RECORD IN recentWeightChangeHistory
-		if self.history[0]['connectionTime'] > 600:
-			self.weight /= self.history[0]['changeMagnitude']
-			del self.history[0]
+		oldConnectionAge = self.connectionTime - 600
+		if len(self.history) > 0:
+			# if self.history[0]['connectionTime'] > 600:  # keep track instead (RJT)
+			if self.history[0]['connectionTime'] < oldConnectionAge:
+				self.weight /= self.history[0]['changeMagnitude']
+				del self.history[0]
 
 	def makeHighContributionPermanent(self):
 		# NEXT, CHECK IF THERE ARE FIVE (Currently set to 3 RJT)(OR MORE, BUT THAT SHOULD NOT OCCUR) INCREASES 
@@ -298,8 +305,9 @@ class ExcitatoryInput:
 
 		if len(self.history) >= BranchContributionsWithin200msecForPermanentWeightChange:
 			self.permanentConnection = True
-			for history in self.history:
-				del history
+			self.history = []
+#			for history in self.history:  # removed to let the python gc take care of this (RJT)
+#				del history
 
 	def getInput(self):
 		return self.input
@@ -327,7 +335,8 @@ class ExcitatoryInput:
 		percent = 1 + self.weightIncreasePercentage[index]/100
 		self.weight *= 1 + percent
 		self.weight = min(MaximumBranchSynapticWeight, self.weight)
-		self.history.append([{'connectionTime':0, 'changeMagnitude':percent}])
+		# self.history.append({'connectionTime':0, 'changeMagnitude':percent})  # keep track instead (RJT)
+		self.history.append({'connectionTime': self.connectionTime, 'changeMagnitude':percent})
 		self.branchFiringSinceWeightChange = 0
 
 	def decreaseInactiveConnectionWeight(self):

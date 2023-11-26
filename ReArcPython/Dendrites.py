@@ -49,7 +49,7 @@ class ApicalDendrite:
 
 	def reduceSynapticWeights(self, proportion):
 		for branch in self.distalBranches:
-			branch.reduceSynapticWeight(proportion)
+			branch.reduceSynapticWeights(proportion)
 
 	def presentInputs(self, excitatoryInputs, modulatoryInputs, multipleSource = False, managementInputs=[]):
         #MODULATORY INPUTS CAN BE EXCITATORY OR INHIBITORY, DEPENDING ON

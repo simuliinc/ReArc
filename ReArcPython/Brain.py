@@ -158,7 +158,7 @@ class Brain:
 		# entorhinal cortex.
 
 		# STEP ONE IS TO GET PREVIOUS OUTPUTS FROM HIPPOCAMPUS
-		recordingManagementInputs = self.hippocampus[cortexArea].popCurrentHippocampalOutputs()
+		recordingManagementInputs = self.hippocampus[cortexArea-1].popCurrentHippocampalOutputs()
 
 		# STEP TWO IS TO UPDATE CORTEX USING CURRENT SENSORY INPUTS AND PREVIOUS OUTPUTS FROM HIPPOCAMPUS
 		brainActivity = self.visualCortex[cortexArea-1].presentInputsInOneTimeslotToCorticalArea(excitatoryInputs, recordingManagementInputs, multipleSource = False)
@@ -171,14 +171,14 @@ class Brain:
 		# STEP THREE IS TO UPDATE HIPPOCAMPUS USING UPDATED CORTEX LAYER TWO AND THREE ACTIVITY"
 		layerTwoActivity = []
 		layerThreeActivity = []
-		for columnNum in range(len(self.visualCortex[cortexArea].columns)):
+		for columnNum in range(len(self.visualCortex[cortexArea-1].columns)):
 			# a better implementation might be column.getLayer(3).pyramidalActivity if the output
 			# from presentInputsInOneTimeslotToCorticalArea is the same value as the what is stored
 			# on the layer pyramidalActivity (RJT)
 			layerTwoActivity.append(brainActivity[columnNum][1]) 	# layer 2
 			layerThreeActivity.append(brainActivity[columnNum][2])	# layer 3
 
-		self.hippocampus[cortexArea].updateHippocampalRecordsForMultipleModulationCyclesWithInternalActivity(layerThreeActivity,layerTwoActivity)	
+		self.hippocampus[cortexArea-1].updateHippocampalRecordsForMultipleModulationCyclesWithInternalActivity(layerThreeActivity,layerTwoActivity)	
 
 		return brainActivity
 	
@@ -196,7 +196,7 @@ class Brain:
 			for column in timeSlot:
 				for spikes in column[layer - 1]:  # layer - 1 to account for 0 base indexes 
 					totalSpikes[i] += spikes
-
+		return totalSpikes
 	
 	def presentDoubleCategoryInstanceWithSecondCategory(self, categoryInputSource, secondCategoryInputSource):
 
@@ -219,7 +219,7 @@ class Brain:
 	def nullOutInputs(self):
 		# The following code presents null inputs (no spikes) to brain for 25 milliseconds (75 timeslots)
 		# to ensure that previous presentation does not contribute to later presentation"
-		inputs = [0]*200
+		inputs = [0]*InputSpaceSize
 		for i in range(75):			
 			self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, 1, False)
 
@@ -290,10 +290,11 @@ class Brain:
 		# In 600 timeslots (200 msec) , there are 8 modulation periods of 75 timeslots (25 milliseconds). Each 
 		# of three category instrances are presented once in each modulation period (i.e. for about 
 		# 8 milliseconds). So a category instance is presented for a period of about 67 milliseconds
-
+		inputResults = []
 		for i in range(600):
-			inputs = firstCategoryInputSource.getSpikesInNextTimeslot(secondCategoryInputSource, thirdCategoryInputSource)
-			Y.append(self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, cortexArea, shouldRecord))
+			print ("timeslot: "+str(i)+" of 600")
+			inputs = firstCategoryInputSource.getSpikesInNextTimeslot(secondCategoryInputSource.category, thirdCategoryInputSource.category)
+			inputResults.append(self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, cortexArea, shouldRecord))
 
 		# the following code totals spikes but is not used except to fill another global.
 		# The globals filling code was commented out.  Leaving this out for performance (RJT).
@@ -332,11 +333,11 @@ class Brain:
 		# layer 3 outputs for the thirdCategoryInputSource appear in timeslots 27 - 45.
 		# HENCE PresentationResults must capture results in that order to preserve the results in the same 
 		# order as the presentations.
-		self.reportPresentationResults(Y[-599:])
+		self.reportPresentationResults(inputResults[-599:])
 
 		# Resetting of Y can be eliminated to capture all neuron activity in all timeslots. However, for a 
 		# long run this overloads the memory
-		Y = []
+		# Y = []
 
 		# YY addLast: (((hippocampus at: 1) showStrongActivityCount) deepCopy). 
 
@@ -353,3 +354,17 @@ class Brain:
 	def sleep(self):
 		assert False, "This code would break with no cortiacal index if called and it doesn't appear to be called in Smalltalk"
 		self.visualCortex.sleep()
+
+class BrainActivity:
+
+	# This is inteneded to organize the presentation results brain activity with more 
+	# coordinated data that is easier to sum.  The sum in presentaion results takes half of the 
+	# processing time (RJT)
+
+	# 600 timeslots, 15 columns, 3 layers, 10 potential spikes for 2 layers 
+	# and 1 potential spike for the layer 3
+
+	def __init__(self, timeSlot, column, layer, spikes):
+		pass
+
+

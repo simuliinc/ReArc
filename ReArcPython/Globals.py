@@ -1,53 +1,89 @@
 # Globals.py is for global variables 
 
-CorticalConditionDefiningInputWeight = 1.7
-BranchContributionsWithin200msecForPermanentWeightChange = 3
+CorticalConditionDefiningInputWeight = 1.7 # (Reference value 1.0)
+
+# Synaptic weights are increased if the synapse gets an input, shortly afterwards the branch 
+# injects potential into the dendrite, and shortly after than the neuron fires. However, unless 
+# this sequence occurs at least the following number of times within a 200 millisecond period, 
+# increases are reversed
+BranchContributionsWithin200msecForPermanentWeightChange = 3 # (Reference value 3)
+
 LayerOneInterneuronOutputSynapticStrengths = -5
 LayerTwoInterneuronOutputSynapticStrengths = 0
-CorticalBasalDendriteThreshold = 985
-NumberOfConditionRecordingOutputsFromBlackBoxHippocampus = 0  # used in DendriteBranch 0 turns off the ConditionRecordingManagement
-CorticalConditionRecordingManagementInputWeight = 0.5
-MaximumBranchSynapticWeight = 3.2 # used to limit the weights of Dendrite Branches
-HippocampalWeightReductionFactor = 0.9999 # used in ConditionalRecordingManagementInputWeights of DendriteBranch
-BranchFiringsToDecreaseInSynapticWeights = 4 # used in DendrichBranch >> adjustWeightsOfRecentlyActiveInputs
+
+# Total postsynaptic potentials required to inject potential from dendrite into soma, causing neuron 
+# to fire in layers one and two
+CorticalBasalDendriteThreshold = 985 #(Reference value 985)
+
+NumberOfConditionRecordingOutputsFromBlackBoxHippocampus = 0  # (Reference value 0) used in DendriteBranch 0 
+# turns off the ConditionRecordingManagement
+
+CorticalConditionRecordingManagementInputWeight = 0.5 # (Reference value 0.5)
+MaximumBranchSynapticWeight = 3.2 # (Reference value 1.7) used to limit the weights of Dendrite Branches
+
+HippocampalWeightReductionFactor = 0.9999 # (Reference value 0.9999) used in 
+# ConditionalRecordingManagementInputWeights of DendriteBranch
+
+# If a branch fires a number of times but each time some synapse does not contribute, the weight of that 
+# synapse is decreased
+BranchFiringsToDecreaseInSynapticWeights = 4 # (Reference value 4) used in DendrichBranch >> adjustWeightsOfRecentlyActiveInputs
+
 ModulationProbabilityFactor = [0]*75
 IntegerCollectionSizeForInputStateGeneration = 10000
-BDNFincrementPerFiring = 0.5
-BDNFdecrementFollowingWeightReduction = 1
-BDNFconcentrationReductionPerTimeslot = 0.9999
-BDNFconcentrationThresholdForReductionInSynapticWeights = 17.5
-FrequentFiringReductionInSynapticWeightsProportion = 0.9
+
+# Each time a neuron fires, BDNF is released into the local environment. Concentration declines regularly with 
+# time, but if the neuron fires often enough that the BDNF concentration reaches a threshold, all regular synapses 
+# on the neuron are reduced by the same proportion
+FrequentFiringReductionInSynapticWeightsProportion = 0.9 # (Reference value 0.9)
+BDNFincrementPerFiring = 0.5 # (Reference value 0.5)
+BDNFdecrementFollowingWeightReduction = 1 # (Reference value 1)
+BDNFconcentrationReductionPerTimeslot = 0.9999 # (Reference value 0.9999)
+BDNFconcentrationThresholdForReductionInSynapticWeights = 17.5 # (Reference value 17.5)
+
 LayerOneInterneuronThreshold = 600 # Used in InhibitoryInterneuron
-NumberOfColumns = 15 # Used in HippocampaalSystemBlackBox and Brain and OrderedCollection Overrides
+
+NumberOfColumns = 15 # (Reference value 10) Used in HippocampaalSystemBlackBox and Brain and 
+#OrderedCollection Overrides
+
 NumberOfLayerOneInterneurons = 10
 RecordingManagementInputsPerTimeslot = [] # Used in Brain
 
 #Start Used in Brain >> configurefirstArea
-PyramidalsPerColumnLayerOne = 10 
-PyramidalsPerColumnLayerTwo = 10
-PyramidalsPerColumnLayerThree = 1
+PyramidalsPerColumnLayerOne = 10 # (Reference value 10)
+PyramidalsPerColumnLayerTwo = 10 # (Reference value 10)
+PyramidalsPerColumnLayerThree = 1 # (Reference value 1)
 NumberOfLayerOneInterneurons = 10
 NumberOfLayerTwoInterneurons = 10
 LayerOneInterneuronThreshold = 600
 LayerTwoInterneuronThreshold = 600
 LayerOneInterneuronInputSynapticStrengths = 1
-InputSpaceSize = 400
-BiasOnFavouredInputs = 3
-NumberOfBranchesPerLayerOnePyramidal = 50
-NumberOfBranchesPerLayerTwoPyramidal = 10
-NumberOfBranchesPerLayerThreePyramidal = 10
-NumberOfConditionDefiningInputsPerCorticalLayerOneBranch = 20
-NumberOfConditionDefiningInputsPerCorticalLayerTwoBranch = 15
-NumberOfConditionDefiningInputsPerCorticalLayerThreeBranch = 15
+InputSpaceSize = 400 # (Reference value 200)
+
+# In the initial configuration of the cortex, in each column a bias is placed on the random selection 
+# of inputs to layer one pyramidals to make the selection of one of the favoured inputs for the column 
+# several times more likely than other inputs
+BiasOnFavouredInputs = 3 # (Reference value 0)
+
+
+NumberOfBranchesPerLayerOnePyramidal = 50 # (Reference value 20)
+NumberOfBranchesPerLayerTwoPyramidal = 10 # (Reference value 10)
+NumberOfBranchesPerLayerThreePyramidal = 10 # (Reference value 10)
+NumberOfConditionDefiningInputsPerCorticalLayerOneBranch = 20 # (Reference value 25)
+NumberOfConditionDefiningInputsPerCorticalLayerTwoBranch = 15 # (Reference value 15)
+NumberOfConditionDefiningInputsPerCorticalLayerThreeBranch = 15 # (Reference value 15)
 NumberOfInputsToLayerOneInterneuronsFromEachOtherColumn = 20
 NumberOfInputsToLayerOneInterneuronsFromOwnColumn = 10
 NumberOfInputsToLayerTwoInterneuronsFromEachOtherColumn = 0
 NumberOfInputsToLayerTwoInterneuronsFromOwnColumn = 20
-DendriticBranchThresholdLayerOne = 450
-DendriticBranchThresholdLayerTwo = 450
-DendriticBranchThresholdLayerThree = 200
-InitialLayerThreeSynapticWeight = 1.0
-CorticalLayerThreeBasalDendriteThreshold = 700
+DendriticBranchThresholdLayerOne = 450 # (Reference value 450)
+DendriticBranchThresholdLayerTwo = 450 # (Reference value 450)
+DendriticBranchThresholdLayerThree = 200 # (Reference value 400)
+InitialLayerThreeSynapticWeight = 1.0 # (Reference value 1.0)
+
+# Total postsynaptic potentials required to inject potential from dendrite into soma, causing neuron 
+# to fire in layer three
+CorticalLayerThreeBasalDendriteThreshold = 700 # (Reference value 990)
+
 #End Used in Brain >> configurefirstArea 
 
 # Start Brain >> presentDoubleCategoryInstanceWithSecondCategory
@@ -64,11 +100,20 @@ SelectedSubsets = None  # This was not set in Smalltalk.  The method configureSe
 						# It is not clear what SelectedSubsets should be set to but it may be simular to 
 						# favored Inputs.  See test_brain.py for an example of favoredInpus
 InitialBiasOnSelectedColumns = None # This was not set in Smalltalk.  The method configureSecondArea was not 
-									#called in Smalltalk It is not clear what InitialBiasOnSelectedColumns should be set to 
-									# but it may be simular to BiasOnFavouredInputs.  
-									# See above where BiasOnFavouredInputs = 3 and Brain.py Brain >> configureFirstArea 
-									# for an example of how BiasOnFavouredInputs is used
+					#called in Smalltalk It is not clear what InitialBiasOnSelectedColumns should be set to 
+					# but it may be simular to BiasOnFavouredInputs.  
+					# See above where BiasOnFavouredInputs = 3 and Brain.py Brain >> configureFirstArea 
+					# for an example of how BiasOnFavouredInputs is used
 #End Used in Brain >> configureSecondArea
+
+# Global in Smalltalk Not Used in Smalltalk
+# If feedback is being provided to a category identification, the recommendation weights of active columns 
+# that recommended the incorrect identification are reduced by the following factor
+# There is a HippocampalWeightReductionFactor global that is used
+WeightReductionFactor = 1.05   # (Reference value 1.1) this comes from Setting Parameters Workspace
+
+# The favoured inputs are recorded for later analysis if required
+FavoredInputs = []
 
 def setModulationProbabilityFactor():
 	startPosition = 11

@@ -34,7 +34,7 @@ class PyramidalNeuron:
 			# IF NEURON IS FIRING, INCREASE THE WEIGHTS OF INPUTS TO BRANCHES THAT HAVE RECENTLY 
 			# BEEN ACTIVE (UP TO A MAXIMUM WEIGHT), PROVIDED THAT THE BRANCH HAS BEEN ACTIVE AS A 
 			# WHOLE. THE TEST THAT THE BRANCH HAS BEEN ACTIVE OCCURS WITHIN THE BRANCH METHOD"
-			self.basalDendrite.adjustWeightsOfRecentlyActiveInputs(self, False, None)
+			self.basalDendrite.adjustWeightsOfRecentlyActiveInputs(False, None)
 
 			if not len(managementInputs):
 				# only run this code if there are no management inputs (RJT)
@@ -56,9 +56,9 @@ class PyramidalNeuron:
 		return int(self.firingStatus)
 
 	def reduceSynapticWeights(self, proportion):
-		self.basilDendrite.reduceSynapticWeights(proportion)
+		self.basalDendrite.reduceSynapticWeights(proportion)
 
-	def changeBasilDendriteThresholds(self, newBranchThreshold):
+	def changeBasalDendriteThresholds(self, newBranchThreshold):
 		self.basalDendrite.changeBranchThresholds()
 
 

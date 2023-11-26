@@ -26,9 +26,11 @@ class InputState:
 			# because a 0 does not contribute to currentInputSpikeProbability
 			self.thirdCategory = [0]*len(self.category)
 		self.currentTimeslot += 1
-		self.currentPhase = ((self.currentTimeslot - 1 + self.phaseAtInitialTimeslot) % 75) + 1
-		secondPhase = ((self.currentPhase + 25) % 75) + 1
-		thirdPhase = ((secondPhase + 25) % 75) + 1
+		# Phases are indexes into the ModulationProbabiltyFactor which is a collection with len 75 
+		# This is zero based in Python (RJT)
+		self.currentPhase = ((self.currentTimeslot - 1 + self.phaseAtInitialTimeslot) % 75) 
+		secondPhase = ((self.currentPhase + 25) % 75) 
+		thirdPhase = ((secondPhase + 25) % 75) 
 		
 		# SPIKE PROBABILITIES IN category ARE NUMBERS FROM 1 TO 200 currentInputSpikeProbability 
 		# IS A NUMBER BETWEEN 0 AND 200. A RANDOM NUMBER IS SELECTED FROM IntegerCollectionForInputStateGeneration, 
