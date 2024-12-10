@@ -2,6 +2,19 @@ from Brain import *
 from PresentOneCategoryInstance import *
 import random
 from datetime import *
+import psutil
+
+def report_memory_usage():
+    # Get the current process
+    process = psutil.Process()
+    
+    # Get memory info
+    memory_info = process.memory_info()
+    
+    # Report memory usage in bytes
+    print(f"Memory Usage: {memory_info.rss / (1024 ** 2):.2f} MB")  # Resident Set Size (RSS)
+    print(f"Memory Usage (Virtual): {memory_info.vms / (1024 ** 2):.2f} MB")  # Virtual Memory Size (VMS)
+
 
 def typeABrainRun():
 	startTime = datetime.now()
@@ -76,17 +89,19 @@ def typeABrainRun():
 	# time and to test working memory simultaneous handling of multiple objects, three different 
 	# category instances are presented in each 200 millisecond period, in three different modulation 
 	# phases
-	print("Presenting data\n")
-	for presentationCycle in range(40):
-		print ("Cycle: "+str(presentationCycle)+" of 40\n")
+	cycles = 1 # normally 40 
+	print("Presenting data\n", flush=True)
+	for presentationCycle in range(cycles):
+		print ("Cycle: "+str(presentationCycle)+" of "+str(cycles)+"\n", flush=True)
 		for category in range(0,30,3):
-			print ("Category: "+str(category)+"-"+str(category+2)+" of 30\n")
+			print ("Category: "+str(category)+"-"+str(category+2)+" of 30\n", flush=True)
 			brain.presentTripleCategoryInstance(spikeEvaluator.asInputState(category), 
-									  spikeEvaluator.asInputState(category + 1),
-									  spikeEvaluator.asInputState(category + 2))
-
+				spikeEvaluator.asInputState(category + 1),
+				spikeEvaluator.asInputState(category + 2))
+		report_memory_usage()
 	endTime = datetime.now()
-	print('Time to Run: '+repr(endTime-startTime))
+	brain.reportPresentationResults(Y[-599:])
+	print('Time to Run: '+repr(endTime-startTime), flush=True)
 
 ################## Main function
 typeABrainRun()

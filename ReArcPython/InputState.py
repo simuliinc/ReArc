@@ -1,6 +1,7 @@
 # An InputState is a harness for brain runs
 from Globals import *
 import random
+import numpy as np
 
 class InputState:
 
@@ -62,18 +63,19 @@ class InputState:
 		# the variable simultaneityCount. If this total exceeds the limit simultaneityCountLimit (specified within the 
 		# method), then the variable existingMeasure is updated.
 		simultaneityCountLimit = 5
+		combinedInput = np.zeros(len(setOfInputs), dtype=int)  # Initialize combinedInput as a NumPy array
+
 		for period in range(40):
-			combinedInput = [0]*len(setOfInputs)
-			for timeslot in range(15):
-				inputs = self.getSpikesInNextTimeslot()
-				for i, soi in enumerate(setOfInputs):
-					if inputs[soi] == 1:
-						combinedInput[i] = 1
-			simultaneityCount = sum(setOfInputs)
-			if simultaneityCount > simultaneityCountLimit: 
-				for i, ci in enumerate(combinedInput):
-					if ci == 1:
-						existingMeasure[i] += 1
+			inputs = self.getSpikesInNextTimeslot()  # Get spikes for the entire period at once
+			
+			# Update combinedInput based on the indices in setOfInputs
+			for i, soi in enumerate(setOfInputs):
+				if inputs[soi] == 1:
+					combinedInput[i] = 1
+
+		simultaneityCount = np.sum(combinedInput)  # Count the total spikes in combinedInput
+		if simultaneityCount > simultaneityCountLimit:
+			existingMeasure += combinedInput  # Update existingMeasure in one go
 
 		return existingMeasure
 

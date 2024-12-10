@@ -8,6 +8,7 @@ from Globals import *
 from PotentialRecord import *
 import itertools
 import random
+import numpy as np
 
 class DendriteBranch:
 
@@ -71,19 +72,29 @@ class DendriteBranch:
 			# AN ACTION POTENTIAL FOR THAT INPUT. IF SO, SET TIME SINCE INPUT FOR 
 			# THAT INPUT TO ZERO, AND INCREMENT ALL THE FIELDS OF potentialRecord 
 			# FOR THE BRANCH"	See trace https://github.com/simuliinc/ReArc/issues/16
-			try: 
-				if (inputs[input.getInput()]) == 1:
-					input.recentActivity = 0
-					self.potentialRecord.adjustPotentialByWeight(input.weight)
-			except IndexError:
+			#try: 
+			#	if (inputs[input.getInput()]) == 1:
+			#		input.recentActivity = 0
+			#		self.potentialRecord.adjustPotentialByWeight(input.weight)
+			#except IndexError:
 				# self halt
-				pass
+			#	pass
+			# store the value instead of retrieving it multiple times.
+			input_index = input.getInput()
+			if input_index < len(inputs) and inputs[input_index] == 1:  # Avoid IndexError
+				input.recentActivity = 0
+				self.potentialRecord.adjustPotentialByWeight(input.weight)
 
 		# GO THROUGH THE conditionRecordingManagementInputs AND CHECK IF THERE IS AN 
 		# ACTION POTENTIAL FOR THAT INPUT. IF SO, INCREMENT ALL THE FIELDS OF potentialRecord
-		if len(managementInputs):
+		#if len(managementInputs):
+		#	for input in self.conditionRecordingManagementInputs:
+		#		if managementInputs[input.input] == 1:
+		#			self.potentialRecord.adjustPotentialByWeight(input.conditionWeight)
+			# Check management inputs only if they exist
+		if managementInputs:
 			for input in self.conditionRecordingManagementInputs:
-				if managementInputs[input.input] == 1:
+				if input.input < len(managementInputs) and managementInputs[input.input] == 1:
 					self.potentialRecord.adjustPotentialByWeight(input.conditionWeight)
 
 		# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 
@@ -195,13 +206,13 @@ class DendriteBranch:
 		# A CONDITION MUST OCCUR MULTIPLE TIMES WITHIN THE SAME ATTENTION PERIOD FOR IT TO BE ESTABLISHED. 
 		# AT THE MOMENT, ONLY DECREASES IF CONNECTION WAS NOT RECENTLY ACTIVE WHEN A BACKPROPAGATING ACTION 
 		# POTENTIAL IS RECEIVED
-		# When the neuron fires, it sends a backpropagating action potential into its dendrite.This backpropagating 
+		# When the neuron fires, it sends a back propagating action potential into its dendrite.This backpropagating 
 		# action potential increases the weights of synapses that have recently received an action potential, provided 
 		# that the branch has fired recently.
 		# IF the branch has fired within the last 5 milliseconds, all synapses that have received an action potential 
 		# within the last 5 milliseconds will have their weights increased.
 		# Activity of synapse
-		# Timeslots before		% increase
+		# Time slots before		% increase
 		# 1				10
 		# 2				10
 		# 3				10
@@ -225,19 +236,16 @@ class DendriteBranch:
 	
 				# THE FOLLOWING CODE IS ONLY INVOKED THE FIRST TIME THE BRANCH RECEIVES A BACKPROPAGATING ACTION 
 				# POTENTIAL. THE CODE SETS ALL THE ELEMENTS IN branchFiringsSinceLastIncreaseInExcitatoryWeights TO 1."
-				if multipleSources: 
-					inputs = self.excitatoryInputsForSoruce(source)
-				else: 
-					inputs = self.excitatoryInputs
+				inputs = self.excitatoryInputsForSoruce(source) if multipleSources else self.excitatoryInputs
 
 				i = 0
 				for input in inputs:
 					input.receiveBackPropogation()
 					
 					# THE FOLLOWING CODE INCREASES THE CONNECTION WEIGHT IF THE INPUT HAS BEEN ACTIVE SHORTLY BEFORE 
-					# THE BACKPROPAGATING ACTION POTENTIAL WAS RECEIVED FROM THE NEURON"	
+					# THE BACK PROPAGATING ACTION POTENTIAL WAS RECEIVED FROM THE NEURON"	
 					
-					# Use the reecent activity value as an index to loook up the weight increase
+					# Use the recent activity value as an index to look up the weight increase
 					# Modify the recent activity value to account for 0 based Python lookup and ensure that we don't 
 					# index over 14 which is the last position we define for percent increase  
 					index =  min((input.recentActivity - 1),14)
@@ -252,8 +260,8 @@ class DendriteBranch:
 					
 				# THE FOLLOWING CODE REMOVES ALL THE CONNECTIONS SET AT false (now marked as deleteMe RJT) BECAUSE THEIR INPUT 
 				# WEIGHT WAS <= 1 AFTER 10 INCREASES IN ACTIVE BRANCH WEIGHTS. 
-				self.excitatoryInputs = list(itertools.filterfalse(lambda x: x.deleteMe, self.excitatoryInputs))
-				
+				# self.excitatoryInputs = list(itertools.filterfalse(lambda x: x.deleteMe, self.excitatoryInputs))
+				self.excitatoryInputs = [input for input in inputs if not input.deleteMe]
 				# Multiple Sources do not adjust the Hippocampus
 				if not multipleSources:
 					for recordingManagementInput in self.conditionRecordingManagementInputs:

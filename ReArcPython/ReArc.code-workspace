@@ -3,11 +3,5 @@
 		{
 			"path": ".."
 		}
-	],
-	"settings": {},
-	"extensions": {
-		"recommendations": [
-			"tillahoffmann.snakeviz"
-		]
-	}
+	]
 }

@@ -1,0 +1,5 @@
+{
+    "pythonPath": "/usr/bin/python3.10",
+    "venvPath": ".",
+    "include": ["ReArcPython"]
+} 
