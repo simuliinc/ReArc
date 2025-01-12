@@ -27,6 +27,8 @@
 
 - In each iteration of the loop, the presentTripleCategoryInstance: method is called three times.
 
+Diagrams are created using Umlet https://www.umlet.com/ see uxf files in doc directory
+
 - The presentTripleCategoryInstance: method presents three different category instances in three different modulation phases.
 
 - The modulation phases are used to control the frequency of the spikes.
