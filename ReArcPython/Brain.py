@@ -4,6 +4,7 @@ from HippocampalSystemBlackBox import *
 from Globals import *
 from PresentOneCategoryInstance import *
 from InputState import *
+import numpy as np
 
 class Brain:
 	def __init__(self, numberOfCorticalAreas=3):
@@ -142,13 +143,13 @@ class Brain:
 														DendriticBranchThresholdLayerOne, inputPopulation, \
 														range(PyramidalsPerColumnLayerThree))
 		self.visualCortex[1].addPyramidalToLayerQtyThreshold(2, PyramidalsPerColumnLayerTwo, \
-													    DendriticBranchThresholdLayerTwo, inputPopulation)
+				DendriticBranchThresholdLayerTwo, inputPopulation)
 		self.visualCortex[1].addPyramidalToLayerQtyThreshold(3, PyramidalsPerColumnLayerThree, \
-													    DendriticBranchThresholdLayerThree, inputPopulation)
+				DendriticBranchThresholdLayerThree, inputPopulation)
 		self.visualCortex[1].addInterneuronToLayerWithThreshold(1,NumberOfLayerOneInterneurons, \
-														  LayerOneInterneuronThreshold)
+				LayerOneInterneuronThreshold)
 		self.visualCortex[1].addInterneuronToLayerWithThreshold(2, NumberOfLayerTwoInterneurons, \
-														  LayerTwoInterneuronThreshold)
+				LayerTwoInterneuronThreshold)
 
 	def presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(self, excitatoryInputs, cortexArea = 1, shouldRecord = False):
 
@@ -224,10 +225,20 @@ class Brain:
 			self.presentInputsInOneTimeslotToAreaWithBlackBoxHippocampus(inputs, 1, False)
 
 	def reportPresentationResults(self, recentPresentationOutputs):	
+		global PresentationResults
 		PresentationResults.append([[self.totalAcrossTimeslots(recentPresentationOutputs, 1)], 
-							  [self.totalAcrossTimeslots(recentPresentationOutputs, 2)], 
-							  [self.totalAcrossTimeslots(recentPresentationOutputs, 3)]])  # 4th July 2015 <- no idea what this is (RJT)
+									[self.totalAcrossTimeslots(recentPresentationOutputs, 2)], 
+									[self.totalAcrossTimeslots(recentPresentationOutputs, 3)]])  # 4th July 2015 <- no idea what this is (RJT)
+		print(PresentationResults, True)
+		return PresentationResults
 
+	def reportPresentationResultsLayer3(self, recentPresentationOutputs):	
+		global PresentationResults
+		PresentationResults.append([[self.totalAcrossTimeslots(recentPresentationOutputs, 3)], 
+									[self.totalAcrossTimeslots(recentPresentationOutputs, 3)], 
+									[self.totalAcrossTimeslots(recentPresentationOutputs, 3)]])  # 4th July 2015 <- no idea what this is (RJT)
+		print(PresentationResults, True)
+		return PresentationResults
 
 	def presentOneCategoryInstance(self, categoryInputSource):
 		assert False, "this method wasn't used in Smalltalk"
@@ -261,15 +272,18 @@ class Brain:
 		self.nullOutInputs()
 
 
-	def addModulationSlots(self, currentPresentationOutputs, start, stop):
+	def addModulationSlots(self, inputResults, start, stop):
+		global PresentationResults
+		currentPresentationOutputs = []
 		for j in range(8):
 			# modulation 1 - 10  (his appears to be 20 spots not 10 (RJT))
 			for k in range(75*j+start, 75*j + stop):  # 0 to 20 then 75 to 94 (inclusive) (RJT)
-				currentPresentationOutputs.append(Y[k])
+				currentPresentationOutputs.append(inputResults[k])
 		PresentationResults.append(self.totalAcrossTimeslots(currentPresentationOutputs, 3))
 
 	def presentOneCategoryInstanceStoredInputs(self):
-		# category is categoryInputSourceCategoryX
+		global PresentationResults
+		# category is categoryInputSourceCategoryXs
 		# All inputs have previously been stored in Z, except null inputs between each presentation. 
 		# Y stores outputs of all the columns.
 		# PresentationRecord stores the total output spikes over one object presentation, from each 
@@ -298,7 +312,11 @@ class Brain:
 
 		# the following code totals spikes but is not used except to fill another global.
 		# The globals filling code was commented out.  Leaving this out for performance (RJT).
-
+		# The results here should be returned instead of misteriously added to PresentationResults
+		self.addModulationSlots(inputResults,0,21)
+		self.addModulationSlots(inputResults,27,45)
+		self.addModulationSlots(inputResults,48,71)
+			
 		"""		
 				# Total spikes in Layer 3"
 				totalLayerThreeSpikesInTimeslot = self.totalAcrossTimeslots(recentPresentationOutputs, 1)
@@ -327,7 +345,7 @@ class Brain:
 
 		# The following code determines layer three outputs from each column in each modulation period, 
 		# and adds the results to PresentationResults.
-  	 	# NOTE that with setPhaseAtInitialTimeslot: 23, 
+		# NOTE that with setPhaseAtInitialTimeslot: 23, 
 		# layer 3 outputs for the firstCategoryInputSource appear in timeslots 1 - 21.
 		# layer 3 outputs for the secondCategoryInputSource appear in timeslots 48 - 71.
 		# layer 3 outputs for the thirdCategoryInputSource appear in timeslots 27 - 45.
@@ -350,10 +368,114 @@ class Brain:
 		# The following code presents null inputs (no spikes) to brain for 25 milliseconds (75 timeslots) to 
 		# ensure that previous presentation does not contribute to later presentation
 		self.nullOutInputs()
+		return inputResults
 
 	def sleep(self):
 		assert False, "This code would break with no cortiacal index if called and it doesn't appear to be called in Smalltalk"
 		self.visualCortex.sleep()
+  
+	def categoryIdentifications(self, presentationResults, columnWeightsInFavourOfCategories, numberOfCategories, presentationStart, presentationStop):
+		# Convert inputs to numpy arrays for vectorization
+		results = np.array(presentationResults)
+		weights = np.array(columnWeightsInFavourOfCategories)
+		
+		# Initialize output array (3 categories for each presentation)
+		numPresentations = presentationStop - presentationStart + 1
+		categoryIdentifications = np.zeros((numPresentations, 3))
+		
+		# Calculate category weights for all presentations at once
+		# Matrix multiplication of results and weights
+		categoryWeights = np.dot(results[presentationStart:presentationStop+1], weights.T)
+		
+		# Find top 3 categories for each presentation
+		for i in range(numPresentations):
+			# Get indices of top 3 maximum values
+			top3_indices = np.argpartition(categoryWeights[i], -3)[-3:]
+			# Sort them by their values in descending order
+			top3_indices = top3_indices[np.argsort(-categoryWeights[i][top3_indices])]
+			categoryIdentifications[i] = top3_indices
+		
+		return categoryIdentifications
+
+	def calculationOfColumnWeightsInFavourOfThirtyCategories(self, presentationResults, startPoint=601, stopPoint=900, numberOfCategories=30, numberOfColumns=15, weightReductionFactor = 1.035):
+		# "CalculationOfColumnWeightsInFavourOfThirtyCategories
+
+		# This method uses the total number of spikes produced by layer three cortical neurons in each column 
+		# in each category instance presentation. These spike counts are recorded in PresentationResults.
+		# The global variable ColumnWeightsInFavourOfCategories is a 'black box' basal ganglia. It is implemented 
+		# as an OrderedCollection of OrderedCollections, one for each category. Each of the OrderedCollections models 
+		# the cortical weights of each column into the basal ganglia neuron corresponding with the behaviour of identifying 
+		# one category.
+
+		# Hence in response to a presentation, the total weights in favour of each category are determined by finding the total 
+  		# across all columns of (number of spikes from the column * weight of category for that column). The category with the 
+		# largest weight is then selected.
+
+		# In this method, using the cortical outputs of the presentations from startPoint to stopPoint, the weights in favour of 
+		# each category are defined. 
+
+		# It is assumed that the brain is provided with information indicating the correct category during these presentations. 
+        # The effect is that FIRST, the most strongly recommended category using previous weights is determined. SECOND the weights 
+        # of active columns in favour of the correct category are increased. THIRD, if the initial identification was incorrect, 
+        # the weights of active columns in favour of that incorrect category are reduced." 
+		
+		#| resultsToBeProcessed startPoint stopPoint numberOfCategories numberOfPresentations target currentIdentity 
+		# currentPresentation currentCategoryWeightInCurrentPresentation weightsOfCategoriesInCurrentPresentation 
+        # referenceWeightsOfCurrentCategory  selectedCategory | 
+
+		# startPoint := 601.
+		# stopPoint := 900.
+
+		resultsToBeProcessed = presentationResults[startPoint:stopPoint]
+		numberOfPresentations = 1 + stopPoint - startPoint
+
+		# "The following code sets up the structure of column weights in favour of categories, setting all weights initially to zero"
+		columnWeightsInFavourOfCategories = np.zeros((numberOfCategories, numberOfColumns), int)
+
+		# "The following code sets up information about which category is presented in each presentation"
+		# this produces an array of repeating ranges of number of categories to fill number of presentations.
+		target = np.tile(np.arange(1, numberOfCategories + 1), (numberOfPresentations // numberOfCategories, 1)).flatten()
+		
+		# target := OrderedCollection new.
+		# 1 to: (numberOfPresentations/numberOfCategories) do: [:cat1|
+		#	1 to: numberOfCategories do: [:k| target addLast: k].
+		# ].
+
+
+		# "The following do loop goes through each of the presentations. FIRST it determines which category is most 
+		# strongly recommended using previously defined weights. SECOND it adds the number of spikes generated by each 
+		# column to the defined weight of that column in favour of the correct category. THIRD, if the category it picked 
+		# first was incorrect, the recommendation weights in favour of the incorrect category of all the columns that produced 
+		# spikes are reduced by a factor of weightReductionFactor"
+
+		for presentation in range(1, numberOfPresentations):
+			print(f'calc presentation {presentation}')
+		# "FIRST:  In the following code, for each presentation, the weights in favour of each category are calculated using the 
+		# current ColumnWeightsInFavourOfCategories." 	
+			currentIdentity = target[presentation]
+			currentPresentation = resultsToBeProcessed[presentation]
+    
+			weightsOfCategoriesInCurrentPresentation = np.zeros(numberOfCategories)
+			for cat2 in range(numberOfCategories):
+				referenceWeightsOfCurrentCategory = columnWeightsInFavourOfCategories[cat2]
+				currentCategoryWeightInCurrentPresentation = np.dot(currentPresentation, referenceWeightsOfCurrentCategory)
+				weightsOfCategoriesInCurrentPresentation[cat2] = currentCategoryWeightInCurrentPresentation
+			
+		# "In the following code, for each presentation, the category with the largest current recommendation weight is determined"				
+		selectedCategory = np.argmax(weightsOfCategoriesInCurrentPresentation)  # argmax returns the index of the largest value "(largest at: 2) returns the index of largest"
+
+		# "SECOND:  In the following code, for each presentation, the number of spikes generated by a column is added to the recorded 
+		# weight of that column in favour of the correct category" 
+		columnWeightsInFavourOfCategories[currentIdentity] += currentPresentation
+						
+		# "THIRD:  if the original selection was incorrect,  decrease the weights in favour of the incorrectly selected category of 
+		# any active columns"	
+
+		if selectedCategory != currentIdentity:
+			activeColumns = currentPresentation > 0  # Boolean array for active columns
+			columnWeightsInFavourOfCategories[selectedCategory][activeColumns] /= weightReductionFactor
+
+		return columnWeightsInFavourOfCategories
 
 class BrainActivity:
 

@@ -14,18 +14,18 @@ class InputState:
 
 	def getSpikesInNextTimeslot(self, secondCategory = [], thirdCategory = []):
 		# Returns the identities of the inputs that contain an action potential spike in the next timeslot"
-
-		spikes = [0]*len(self.category)
+		categorySize = len(self.category)
+		spikes = [0]*categorySize
 		if len(secondCategory):
 			self.secondCateogry = secondCategory
 		else:
 			# because a 0 does not contribute to currentInputSpikeProbability
-			self.secondCategory = [0]*len(self.category)
+			self.secondCategory = [0]*categorySize
 		if len(thirdCategory):
 			self.thirdCategory = thirdCategory
 		else:
 			# because a 0 does not contribute to currentInputSpikeProbability
-			self.thirdCategory = [0]*len(self.category)
+			self.thirdCategory = [0]*categorySize
 		self.currentTimeslot += 1
 		# Phases are indexes into the ModulationProbabiltyFactor which is a collection with len 75 
 		# This is zero based in Python (RJT)
@@ -46,9 +46,10 @@ class InputState:
 		mpf2 = ModulationProbabilityFactor[secondPhase]
 		mpf3 = ModulationProbabilityFactor[thirdPhase]
 		i = 0
+		np_random_integers = np.random.randint(0, IntegerCollectionSizeForInputStateGeneration, categorySize)
 		for firstCatValue, secondCatValue, thirdCatValue in zip(self.category, self.secondCateogry, self.thirdCategory):
 				currentInputSpikeProbability = (firstCatValue * mpf1) + (secondCatValue * mpf2) + (thirdCatValue * mpf3)
-				spikes[i] = int(currentInputSpikeProbability > random.choice(range(IntegerCollectionSizeForInputStateGeneration)))
+				spikes[i] = int(currentInputSpikeProbability > np_random_integers[i])
 				i += 1
 		return spikes
 	

@@ -49,7 +49,8 @@ def typeABrainRun():
 
 	# PresentationResults global variables capture the layer three column outputs in response to each category 
 	# instance presentation. This information is used by the black box basal ganglia to determine behaviour
-	PresentationResults = []
+	global PresentationResults
+	# PresentationResults = []
 	PresentationResults2 = []
 	print("Defining Categories\n")
 	spikeEvaluator = SpikeEvaluator()
@@ -68,7 +69,7 @@ def typeABrainRun():
 		for randomInputs in range(50):
 			startingSelection.add(random.choice(range(InputSpaceSize)))
 		simultaneityCount = [0]*len(startingSelection)
-		for presentationCycles in range(10):
+		for presentationCycles in range(10):  # review this Looks wrong to Rachel
 			for categoryNumber in range(30):
 				simultaneityCount = spikeEvaluator.asInputState(categoryNumber).addInputSimultaneityMeasureForOnePeriod(simultaneityCount, startingSelection)
 		startingSelection = list(startingSelection)
@@ -79,6 +80,7 @@ def typeABrainRun():
 
 	# The favoured inputs are recorded for later analysis if required
 	FavoredInputs = favouredInputs
+	print(FavoredInputs)
 	print("Configuring the Brain\n")
 	brain = Brain(2)
 	brain.configureFirstArea(favouredInputs)
@@ -100,7 +102,10 @@ def typeABrainRun():
 				spikeEvaluator.asInputState(category + 2))
 		report_memory_usage()
 	endTime = datetime.now()
-	brain.reportPresentationResults(Y[-599:])
+	# presentationResults = brain.reportPresentationResultsLayer3(Y[-599:])
+	columnWeightsInFavourOfCategories = brain.calculationOfColumnWeightsInFavourOfThirtyCategories(PresentationResults, startPoint=601, stopPoint=900, numberOfCategories=30, numberOfColumns=15, weightReductionFactor = 1.035)
+	categoryIdentifications = brain.categoryIdentifications(PresentationResults, columnWeightsInFavourOfCategories, numberOfCategories = 30, presentationStart=601, presentationStop=900)
+	print(categoryIdentifications)
 	print('Time to Run: '+repr(endTime-startTime), flush=True)
 
 ################## Main function

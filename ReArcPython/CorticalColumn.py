@@ -94,6 +94,7 @@ class CorticalColumn:
 		layerOneOutputs = []
 		layerTwoOutputs = []
 		layerThreeOutputs = []
+		columnActivity = []
 
 		for corticalLayerNumber in range(1,4):
 			corticalLayer = self.getLayer(corticalLayerNumber)
@@ -101,16 +102,23 @@ class CorticalColumn:
 			for neuron in corticalLayer.pyramidalNeurons:
 				if corticalLayerNumber == 1:
 					corticalLayer.pyramidalActivity.append(neuron.presentInputs(conditionDefiningInputs, corticalLayer.interneuronsActivity, multipleSource))
+					layerOneOutputs.append(corticalLayer.pyramidalActivity[-1])
 				elif corticalLayerNumber == 2:
 					corticalLayer.pyramidalActivity.append(neuron.presentInputs(previousLayer.pyramidalActivity, corticalLayer.interneuronsActivity))
+					layerTwoOutputs.append(corticalLayer.pyramidalActivity[-1])
 				elif corticalLayerNumber == 3:
 					corticalLayer.pyramidalActivity.append(neuron.presentInputs(previousLayer.pyramidalActivity, [], False, managementInputs))
+					layerThreeOutputs.append(corticalLayer.pyramidalActivity[-1])
 				else:
 					assert False, "we currently only suport 3 layers"
 				assert corticalLayer.pyramidalActivity[-1] != None
 
-		return list(map( lambda x : x.pyramidalActivity, self.layers))
-	
+		columnActivity.append(layerOneOutputs)
+		columnActivity.append(layerTwoOutputs)
+		columnActivity.append(layerThreeOutputs)
+		return columnActivity
+		# return list(map( lambda x : x.pyramidalActivity, self.layers))
+
 	def updateInterneuronActivityForLayer(self, corticalLayerNumber):
 		corticalLayer = self.getLayer(corticalLayerNumber)
 		for interNeuron, pryamidalActivity in zip(corticalLayer.interneurons, corticalLayer.pyramidalActivity):
