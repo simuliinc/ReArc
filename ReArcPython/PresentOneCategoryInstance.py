@@ -96,7 +96,7 @@ class SpikeEvaluator:
 	def asInputState(self, categoryNumber):
 		# use category -1 for NullCategory (all zeros)  (rjt)
 		if categoryNumber == -1:
-			return InputState([0]*400)
+			return InputState(np.zeros(400, dtype=int))
 		else:
 			return InputState(self.category[categoryNumber])
 

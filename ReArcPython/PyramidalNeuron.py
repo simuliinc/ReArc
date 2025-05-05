@@ -28,7 +28,7 @@ class PyramidalNeuron:
 		self.firingStatus = self.basalDendrite.presentInputs(excitatoryInputs, interneuronActivity, multipleSource, managementInputs)
 
 		# IF THE NEURON IS FIRING, SETS THE COUNT OF TIMESLOTS SINCE PREVIOUS FIRING TO ZERO
-		if self.firingStatus: 
+		if self.firingStatus: 	
 			self.timeSincePreviousFiring = 0
 
 			# IF NEURON IS FIRING, INCREASE THE WEIGHTS OF INPUTS TO BRANCHES THAT HAVE RECENTLY 
@@ -36,7 +36,7 @@ class PyramidalNeuron:
 			# WHOLE. THE TEST THAT THE BRANCH HAS BEEN ACTIVE OCCURS WITHIN THE BRANCH METHOD"
 			self.basalDendrite.adjustWeightsOfRecentlyActiveInputs(False, None)
 
-			if not len(managementInputs):
+			if len(interneuronActivity) > 0:
 				# only run this code if there are no management inputs (RJT)
 				# THE FOLLOWING CODE DECREASES ALL THE SYNAPTIC WEIGHTS ON THE NEURON IF FIRING HAS RECENTLY 
 				# OCCURRED TOO FREQUENTLY. THE VARIABLE synapticWeightReductionTendency CAN BE VIEWED AS CORRESPONDING 
@@ -48,10 +48,12 @@ class PyramidalNeuron:
 				# WOULD BE APPLIED ABOUT 600 TIMES. TO REDUCE PROCESSING TIME, THE REDUCTION IS MADE ONCE AND 
 				# synapticWeightReductionTendency IS THEN REDUCED BY 1
 				self.synapticWeightReductionTendency += BDNFincrementPerFiring
-				if self.synapticWeightReductionTendency > BDNFconcentrationThresholdForReductionInSynapticWeights:
-					self.reduceSynapticWeights(FrequentFiringReductionInSynapticWeightsProportion)
-					self.synapticWeightReductionTendency -= BDNFdecrementFollowingWeightReduction
-				self.synapticWeightReductionTendency *= BDNFconcentrationReductionPerTimeslot
+		
+		if len(interneuronActivity) > 0:
+			if self.synapticWeightReductionTendency > BDNFconcentrationThresholdForReductionInSynapticWeights:
+				self.reduceSynapticWeights(FrequentFiringReductionInSynapticWeightsProportion)
+				self.synapticWeightReductionTendency -= BDNFdecrementFollowingWeightReduction
+			self.synapticWeightReductionTendency *= BDNFconcentrationReductionPerTimeslot
 
 		return int(self.firingStatus)
 

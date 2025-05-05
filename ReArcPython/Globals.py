@@ -1,6 +1,6 @@
 # Globals.py is for global variables 
 
-CorticalConditionDefiningInputWeight = 1.7 # (Reference value 1.0)
+CorticalConditionDefiningInputWeight = 1.0 # (Reference value 1.0)
 
 # Synaptic weights are increased if the synapse gets an input, shortly afterwards the branch 
 # injects potential into the dendrite, and shortly after than the neuron fires. However, unless 
@@ -13,7 +13,7 @@ LayerTwoInterneuronOutputSynapticStrengths = 0
 
 # Total postsynaptic potentials required to inject potential from dendrite into soma, causing neuron 
 # to fire in layers one and two
-CorticalBasalDendriteThreshold = 985 #(Reference value 985)
+CorticalBasalDendriteThreshold = 700 #(Reference value 985)
 
 NumberOfConditionRecordingOutputsFromBlackBoxHippocampus = 0  # (Reference value 0) used in DendriteBranch 0 
 # turns off the ConditionRecordingManagement
@@ -28,7 +28,7 @@ HippocampalWeightReductionFactor = 0.9999 # (Reference value 0.9999) used in
 # synapse is decreased
 BranchFiringsToDecreaseInSynapticWeights = 4 # (Reference value 4) used in DendrichBranch >> adjustWeightsOfRecentlyActiveInputs
 
-ModulationProbabilityFactor = [0]*75
+ModulationProbabilityFactor = [0 for _ in range(75)]
 IntegerCollectionSizeForInputStateGeneration = 10000
 
 # Each time a neuron fires, BDNF is released into the local environment. Concentration declines regularly with 

@@ -36,6 +36,17 @@ class DendriteBranch:
 
     
 	def presentExcitatoryInputsToBranch(self, inputs, multipleSource = False, managementInputs=[]):
+		# Check if first element is a collection (like Smalltalk's t1 at: 1 isCollection)
+		is_first_element_collection = (isinstance(inputs, (list, tuple, set, np.ndarray)) and 
+									 len(inputs) > 0 and 
+									 isinstance(inputs[0], (list, tuple, set, np.ndarray))) and any(managementInputs)
+		
+		if is_first_element_collection:
+			return self.presentMultipleExcitatoryInputsToBranch(inputs, managementInputs)
+		else:
+			return self.presentSingleExcitatoryInputToBranch(inputs, managementInputs)
+
+	def presentSingleExcitatoryInputToBranch(self, inputs, managementInputs=[]):
         #FIRST STEP IS TO SHIFT potentialRecord ALONG ONE TIMESLOT
 		self.potentialRecord.shift()
 
@@ -49,9 +60,11 @@ class DendriteBranch:
 		# ONE INPUT. THE RECORD IS AN OrderedCollection MADE UP TO 
 		# TWO OrderedCollection. THE FIRST OF THESE TWO OrderedCollections 
 		# CONTAINS THE NUMBER OF TIMESLOTS SINCE THE CHANGE OCCURRED, 
-		# THE SECOND CONTAINS THE MAGNITUDE OF THE CHANGE.
-		
+		# THE SECOND CONTAINS THE MAGNITUDE OF THE CHANGE.\
+
+
 		for input in self.excitatoryInputs:
+
 			# assert len(input.history) <= 3, "history is a collection of collections"
 			# print(str(input.history))
 			input.advanceTime()
@@ -92,9 +105,9 @@ class DendriteBranch:
 		#		if managementInputs[input.input] == 1:
 		#			self.potentialRecord.adjustPotentialByWeight(input.conditionWeight)
 			# Check management inputs only if they exist
-		if managementInputs:
+		if managementInputs and managementInputs != 0:  # Check if management inputs exist
 			for input in self.conditionRecordingManagementInputs:
-				if input.input < len(managementInputs) and managementInputs[input.input] == 1:
+				if input.input < len(managementInputs) and managementInputs == 1:
 					self.potentialRecord.adjustPotentialByWeight(input.conditionWeight)
 
 		# SET firingProbability AT 0% IF POTENTIAL IN CURRENT TIMESLOT IS LESS 
@@ -115,6 +128,67 @@ class DendriteBranch:
 			self.branchFirings += 1
 
 		return self.firingStatus
+	
+	def presentMultipleExcitatoryInputsToBranch(self, inputs, managementInputs=[]):
+		"""
+		Process multiple excitatory inputs to the branch, matching the Smalltalk implementation.
+		
+		Args:
+			inputs: Multi-dimensional array of inputs (sources x inputs)
+			managementInputs: Recording management inputs
+		
+		Returns:
+			Boolean indicating if the branch fired
+		"""
+		# FIRST STEP: Shift potentialRecord (remove first, add 0 at end)
+		self.potentialRecord.shift()
+		
+		# NEXT: Increase timeSinceLastActivityOfBranch by 1
+		self.timeSinceLastActivityOfBranch += 1
+		
+		# Reset firing status
+		self.firingStatus = False
+		
+		# Process weight change history for all inputs
+		for input in self.excitatoryInputs:
+
+			for actual_input in inputs:
+				# Increase time for each input's history
+				actual_input.advanceTime()
+				
+				# Handle inputs older than 600 timeslots
+				actual_input.handleMaxTimeSlots()
+				
+				# Check if there are enough contributions to make permanent
+				actual_input.makeHighContributionPermanent()
+				
+				# Increase recent activity count for each input
+				actual_input.recentActivity += 1
+
+				input_index = input.getInput()
+				if input_index < len(inputs) and actual_input.input < len(inputs[input_index]) and inputs[input_index][actual_input.input] == 1:  # Avoid IndexError
+					actual_input.recentActivity = 0
+					self.potentialRecord.adjustPotentialByWeight(actual_input.weight)
+
+		# Process management inputs if they exist
+		if managementInputs and len(managementInputs) > 0:  # Check if management inputs exist
+			for input in self.conditionRecordingManagementInputs:
+				for source_idx in range(len(managementInputs)):
+					if input.source == source_idx and input.input < len(managementInputs[source_idx]) and managementInputs[source_idx][input.input] == 1:
+						self.potentialRecord.adjustPotentialByWeight(input.conditionWeight)
+		
+		# Calculate firing probability based on first potential value
+		if self.potentialRecord.fireforThreshold(self.threshold):
+			# If branch fires, reset potential record and activity counter
+			self.firingStatus = True
+			self.potentialRecord.reset()
+			self.timeSinceLastActivityOfBranch = 0
+			self.branchFirings += 1
+		else:
+			self.firingStatus = False
+			
+		return self.firingStatus
+		
 
 	def addConditionRecordingManagementInput(self, connection):
 		# Adds a connection identity (connection) to conditionRecordingManagementInputs, 
@@ -337,11 +411,11 @@ class ExcitatoryInput:
 		# 13					10						5
 		# 14					10						5
 		# 15					10						5
-		self.weightIncreasePercentage = [5]*3 + [10]*3 + [15]*3 + [10]*3 + [5]*3
+		self.weightIncreasePercentage = np.array([5]*3 + [10]*3 + [15]*3 + [10]*3 + [5]*3)
 
 	def increaseConnectionWeightForIndex(self, index):
 		percent = 1 + self.weightIncreasePercentage[index]/100
-		self.weight *= 1 + percent
+		self.weight *= percent
 		self.weight = min(MaximumBranchSynapticWeight, self.weight)
 		# self.history.append({'connectionTime':0, 'changeMagnitude':percent})  # keep track instead (RJT)
 		self.history.append({'connectionTime': self.connectionTime, 'changeMagnitude':percent})

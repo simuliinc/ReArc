@@ -7,11 +7,11 @@ class HippocampalSystemBlackBox:
 		self.inputsFromLayerTwo = []
 		self.inputsFromLayerThree = []
 		self.resetLayerThree()
-		self.strongActivityCount = [0]*3
+		self.strongActivityCount = [0 for _ in range(3)]
 		self.longTermEpisodicRecord = []
 
 	def resetLayerThree(self):
-		self.outputsToLayerThree = [[0]*NumberOfColumns]*75
+		self.outputsToLayerThree = [[0 for _ in range(NumberOfColumns)] for _ in range(75)]
 
 	def constructMultiplexedNULLOutputsForNext25milliseconds(self, columnsToGetInputFromHippocampus): 
 		# This constructs outputs from the hippocampus (outputsToLayerThree) for the next 25 milliseconds 
@@ -219,19 +219,23 @@ class HippocampalSystemBlackBox:
 		# OrderedCollection containing one OrderedCollection for each of three modulation periods. Each of these OrderedCollections 
 		# has an element corresponding with each column that is initially set to zero"
 
-		totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn = [[0]*NumberOfColumns]*3
+		totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn = [[0 for _ in range(NumberOfColumns)] for _ in range(3)]
 
 		# This code goes through timeslots 4 to 10 in the inputsFromLayerThree for each column, and adds any spikes produced by 
 		# any column to the total count for the column in the first OrderedCollection in 
 		# totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn
+		print("self.inputsFromLayerThree: ", self.inputsFromLayerThree)
 		for timeslot in range(3,13):  # 10 slots 3-12 (RJT)
 			for column in range(NumberOfColumns):
 				try:  # if there is no defined inputFromLayerThree then don't change anything
+					print("self.inputsFromLayerThree[timeslot][column]: ", self.inputsFromLayerThree[timeslot][column])
+					print("sum(self.inputsFromLayerThree[timeslot][column]): ", sum(self.inputsFromLayerThree[timeslot][column]))
+					# raise Exception("Stop here")
 					totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn[0][column] \
-						+= sum(self.inputsFromLayerThree[timeslot][column])
+					+= sum(self.inputsFromLayerThree[timeslot][column])
 				except IndexError:
 					pass
-
+		print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
 		# This code goes through timeslots 29 to "39" [sic should say 38] in the inputsFromLayerThree for each column, and adds any 
 		# spikes produced by any column to the total count for the column in the second OrderedCollection in 
 		# totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn"	
@@ -242,6 +246,7 @@ class HippocampalSystemBlackBox:
 						+= sum(self.inputsFromLayerThree[timeslot][column])
 				except IndexError:
 					pass
+		print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
 
 		# This code goes through timeslots 54 to "64"[sic should say 63] in the inputsFromLayerThree for each column, and adds any spikes 
 		# produced by any column to the total count for the column in the third OrderedCollection in 
@@ -253,7 +258,7 @@ class HippocampalSystemBlackBox:
 						+= sum(self.inputsFromLayerThree[timeslot][column])
 				except IndexError: 
 					pass
-
+		print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
 		return totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn
 	
 	def determineIntermediateLayerColumnActivityOver75timeslotsForEachModulation(self):
@@ -267,7 +272,10 @@ class HippocampalSystemBlackBox:
 		# This code creates the structure for totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn. It is an 
 		# OrderedCollection containing one OrderedCollection for each of three modulation periods. Each of these OrderedCollections 
 		# has an element corresponding with each column that is initially set to zero
-		totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn = [[0]*NumberOfColumns]*3
+		totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn = [[0 for _ in range(NumberOfColumns)] for _ in range(3)]
+
+		# print("self.inputsFromLayerTwo: ", self.inputsFromLayerTwo)
+		# raise Exception("Stop here")
 
 		# This code goes through timeslots 1 to 10 in the inputsFromLayerTwo for each column, and adds any spikes produced by 
 		# any column to the total count for the column in the first OrderedCollection in 
@@ -275,10 +283,11 @@ class HippocampalSystemBlackBox:
 		for timeslot in range(10):  # 10 slots 0-9 (RJT)
 			for column in range(NumberOfColumns):
 				try: 
-					totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[1][column] \
-						+= sum(self.inputsFromLayerThree[timeslot][column])
+					totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[0][column] \
+						+= sum(self.inputsFromLayerTwo[timeslot][column])
 				except IndexError: # if there is no defined inputFromLayerThree then don't change anything
 					pass
+		print("totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
 
 		# This code goes through timeslots 26 to 35 in the inputsFromLayerTwo for each column, and adds any spikes 
 		# produced by any column to the total count for the column in the second OrderedCollection in 
@@ -286,21 +295,22 @@ class HippocampalSystemBlackBox:
 		for timeslot in range(25,35):  # 10 slots 25-34 (RJT)
 			for column in range(NumberOfColumns):
 				try: 
-					totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[2][column] \
-						+= sum(self.inputsFromLayerThree[timeslot][column])
+					totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[1][column] \
+						+= sum(self.inputsFromLayerTwo[timeslot][column])
 				except IndexError: # if there is no defined inputFromLayerThree then don't change anything
 					pass
+		print("totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
 		# This code goes through timeslots 51 to 60 in the inputsFromLayerTwo for each column, and adds any spikes 
 		# produced by any column to the total count for the column in the third OrderedCollection in 
 		# totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn"
 		for timeslot in range(50,60):  # 10 slots 50-59 (RJT)
 			for column in range(NumberOfColumns):
 				try: 
-					totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[3][column] \
-						+= sum(self.inputsFromLayerThree[timeslot][column])
+					totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[2][column] \
+						+= sum(self.inputsFromLayerTwo[timeslot][column])
 				except IndexError: # if there is no defined inputFromLayerThree then don't change anything
 					pass
-
+		print("totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
 		return totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn
  
 
@@ -373,7 +383,7 @@ class HippocampalSystemBlackBox:
 			# and record in totalMiddleLayerInputsByTimeslot. This variable ends up as an OrderedCollection 
 			# of 75 OrderedCollections, each of the 75 being an OrderedCollection with NumberOfColumns elements, 
 			# an element being the number of middle layer neurons in a column that fired in the timeslot.
-			totalMiddleLayerInputsByTimeslot = [[0]*NumberOfColumns]*75
+			totalMiddleLayerInputsByTimeslot = [np.zeros(NumberOfColumns, dtype=int) for _ in range(75)]
 			for timeslot in range(75): 
 				for column in range(NumberOfColumns):
 					totalInputsFromLayerThreeInPrevious25msec[timeslot][column] \
@@ -382,14 +392,14 @@ class HippocampalSystemBlackBox:
 			# The following code determines how may middle layer outputs there were in each timeslot across all columns and 
 			# records in modulationControl. This variable is used to determine the relative probability of hippocampal output 
 			# spikes in each of the next 75 timeslots 
-			modulationControl = [0]*75 
+			modulationControl = np.zeros(75, dtype=int)
 			for timeslotB in range(75):
 				modulationControl[timeSlotB] = sum(totalMiddleLayerInputsByTimeslot[timeslotB])
 	
 			# The following code determines the total middle level firing in each column across all timeslots and records it in 
 			# middleLayerFiringOfEachColumnTotalAcross25milliseconds
 
-			middleLayerFiringOfEachColumnTotalAcross25milliseconds = [[0]*NumberOfColumns]*75	
+			middleLayerFiringOfEachColumnTotalAcross25milliseconds = [np.zeros(NumberOfColumns, dtype=int) for _ in range(75)]	
 			for timeslotC in range(75): 
 				for columnD in range(NumberOfColumns):
 					totalInputsFromLayerThreeInPrevious25msec[columnD] \
@@ -433,6 +443,7 @@ class HippocampalSystemBlackBox:
 		# strong output layer activity (i.e. more than 2 spikes over the 75 timeslots)
 		for modulationPeriod in range(3):
 			for column in range(NumberOfColumns):
+				# print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn[modulationPeriod][column]: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn[modulationPeriod][column])
 				if totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn[modulationPeriod][column] > 1:
 					collectionOfThreeColumnsData[modulationPeriod][column] = 0
 
@@ -461,6 +472,7 @@ class HippocampalSystemBlackBox:
 		self.inputsFromLayerTwo.append(layerTwoActivity) 
 
 		if len(self.outputsToLayerThree) == 0:
+
 			# This is criterion for recalculating outputsToLayerThree. If true, all the 75 outputs calculated earlier will have 
 			# been delivered
 
@@ -511,8 +523,13 @@ class HippocampalSystemBlackBox:
 			# totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn is therefore modified to set to zero the count of 
 			# intermediate level activity of any columns with strong outputs
 
+			print("hmc.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", hmc.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+			# print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+
 			hmc.eliminateColumnsWithStrongLayerThreeActivity(totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
 		
+			print("FINAL layer 2 modulation outputs: ", hmc.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+
 			# The following code selects the columns to receive hippocampal input in each of the three modulation periods in the next 
 			# 25 milliseconds. Two columns are selected if no column produced layer three output in that modulation period in the past 
 			# 5 timeslots, one column if only one column produced output, otherwise no columns. The identities of the columns to receive 
@@ -534,7 +551,11 @@ class HippocampalSystemBlackBox:
 				# If no columns had activity in the middle layer in one modulation period of a 75 timeslot interval, no column will 
 				# be selected to get hippocampal inputs in the next 75 timeslots. So if the largest column activity is zero for a 
 				# modulation interval kkk, no columns will be added to the list of those to get input in that interval
-				if hmc.columnHasSpikes:
+				# print("hmc.columnHasSpikes: ", hmc.columnHasSpikes(mp))
+				# print("numberOfColumnsWithOutputInEachModulationPeriod: ", numberOfColumnsWithOutputInEachModulationPeriod)
+				if hmc.columnHasSpikes(mp):
+					# print("ever")
+					# raise Exception("Stop here")
 					# If two columns produced output in one modulation period of the last 75 timelots, one column needs to be selected 
 					# to get input from the hippocampus in the next 75 timeslots.
 					if numberOfColumnsWithOutputInEachModulationPeriod[mp] == 2:
@@ -568,6 +589,8 @@ class HippocampalSystemBlackBox:
 
 
 			# The following code constructs the outputs from the hippocampus for the next 25 milliseconds
+			print("hmc.columnsToGetInputFromHippocampus: ", hmc.columnsToGetInputFromHippocampus)
+			# raise Exception("Stop here")
 			self.constructMultiplexedOutputsForNext25milliseconds(hmc.columnsToGetInputFromHippocampus)
 
 			# This empties the record for the last 75 timeslots	
@@ -591,6 +614,8 @@ class HippocampalMaxColumn:
 		self.hippocampalBB = hippocampalBB
 		self.totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn = hippocampalBB.determineColumnActivityOver75timeslotsForEachModulation()
 		self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn = hippocampalBB.determineIntermediateLayerColumnActivityOver75timeslotsForEachModulation() 
+		# print("self.totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", self.totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+		# print("self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
 		self.columnsToGetInputFromHippocampus = [[],[],[]]
 		self.lastIndex = 0
 	
@@ -603,14 +628,20 @@ class HippocampalMaxColumn:
 													totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
 
 	def appendMaxColumn(self, modulationPeriod):
+		print("self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
 		if max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod]) > 0: 
 			self.lastIndex = self.columnsToGetInputFromHippocampus[modulationPeriod].  \
 				append(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn. \
 					index(max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod])))
+			print("self.columnsToGetInputFromHippocampus: ", self.columnsToGetInputFromHippocampus, self.lastIndex)
+			print("something else", self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn. \
+					index(max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod])))
+			# raise Exception("Stop here")
 
 	def zeroLastIndex(self, modulationPeriod):
 		self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod][self.lastIndex] = 0
 
 
 	def columnHasSpikes(self, modulationPeriod):
-		 return max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod]) != 0
+		print("self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+		return max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod]) != 0

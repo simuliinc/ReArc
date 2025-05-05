@@ -2,7 +2,7 @@
 from Globals import *
 import random
 import numpy as np
-
+from tqdm import tqdm
 class InputState:
 
 	def __init__(self, category):
@@ -15,42 +15,43 @@ class InputState:
 	def getSpikesInNextTimeslot(self, secondCategory = [], thirdCategory = []):
 		# Returns the identities of the inputs that contain an action potential spike in the next timeslot"
 		categorySize = len(self.category)
-		spikes = [0]*categorySize
+		spikes = np.zeros(categorySize, dtype=int)
+		
+		# Handle categories
 		if len(secondCategory):
-			self.secondCateogry = secondCategory
+			self.secondCategory = secondCategory  # Fix typo
 		else:
-			# because a 0 does not contribute to currentInputSpikeProbability
-			self.secondCategory = [0]*categorySize
+			self.secondCategory = np.zeros(categorySize, dtype=int)
 		if len(thirdCategory):
 			self.thirdCategory = thirdCategory
 		else:
-			# because a 0 does not contribute to currentInputSpikeProbability
-			self.thirdCategory = [0]*categorySize
-		self.currentTimeslot += 1
-		# Phases are indexes into the ModulationProbabiltyFactor which is a collection with len 75 
-		# This is zero based in Python (RJT)
-		self.currentPhase = ((self.currentTimeslot - 1 + self.phaseAtInitialTimeslot) % 75) 
-		secondPhase = ((self.currentPhase + 25) % 75) 
-		thirdPhase = ((secondPhase + 25) % 75) 
+			self.thirdCategory = np.zeros(categorySize, dtype=int)
 		
-		# SPIKE PROBABILITIES IN category ARE NUMBERS FROM 1 TO 200 currentInputSpikeProbability 
-		# IS A NUMBER BETWEEN 0 AND 200. A RANDOM NUMBER IS SELECTED FROM IntegerCollectionForInputStateGeneration, 
-		# WHICH CONTAINS THE NUMBERS 0 TO 9999. IF currentInputSpikeProbability IS GREATER THAN THE RANDOMLY SELECTED 
-		# NUMBER, A SPIKE IS PRESENT. HENCE IF, FOR EXAMPLE, SPIKE PROBABILITY IN THE CURRENT TIMESLOT IS 200, THE 
-		# CHANCE OF A SPIKE IS 200/10000 = 0.02
-
-		# ModulationProbabilityFactor IS A NUMBER THAT DETERMINES HOW PROBABLE A SPIKE WILL BE AT DIFFERENT STAGES OF 
-		# THE MODULATION CYCLE. IT INCREASES THE PROBABILITY AT MODULATION PEAKS AND DECREASES IT AT MODULATION MINIMA, 
-		# BUT SPIKE AVERAGED PROBABILITY OVER THE MODULATION INTERVAL IS THE SAME
-		mpf1 = ModulationProbabilityFactor[self.currentPhase]
-		mpf2 = ModulationProbabilityFactor[secondPhase]
-		mpf3 = ModulationProbabilityFactor[thirdPhase]
-		i = 0
-		np_random_integers = np.random.randint(0, IntegerCollectionSizeForInputStateGeneration, categorySize)
-		for firstCatValue, secondCatValue, thirdCatValue in zip(self.category, self.secondCateogry, self.thirdCategory):
-				currentInputSpikeProbability = (firstCatValue * mpf1) + (secondCatValue * mpf2) + (thirdCatValue * mpf3)
-				spikes[i] = int(currentInputSpikeProbability > np_random_integers[i])
-				i += 1
+		self.currentTimeslot += 1
+		
+		# Match Smalltalk's 1-75 phase calculation
+		self.currentPhase = (self.currentTimeslot - 1 + self.phaseAtInitialTimeslot) % 75
+		if self.currentPhase == 0:
+			self.currentPhase = 75
+		
+		# Calculate second and third phases (1-75 range)
+		secondPhase = self.currentPhase + 25
+		if secondPhase > 75:
+			secondPhase -= 75
+		thirdPhase = secondPhase + 25
+		if thirdPhase > 75:
+			thirdPhase -= 75
+		
+		# Get modulation factors
+		mpf1 = ModulationProbabilityFactor[self.currentPhase - 1]  # -1 for 0-based array access
+		mpf2 = ModulationProbabilityFactor[secondPhase - 1]
+		mpf3 = ModulationProbabilityFactor[thirdPhase - 1]
+		
+		# Generate spikes
+		for i, (firstCatValue, secondCatValue, thirdCatValue) in enumerate(zip(self.category, self.secondCategory, self.thirdCategory)):
+			currentInputSpikeProbability = (firstCatValue * mpf1) + (secondCatValue * mpf2) + (thirdCatValue * mpf3)
+			spikes[i] = int(currentInputSpikeProbability > np.random.randint(0, IntegerCollectionSizeForInputStateGeneration))
+		
 		return spikes
 	
 	def addInputSimultaneityMeasureForOnePeriod(self, existingMeasure, setOfInputs):
@@ -64,19 +65,21 @@ class InputState:
 		# the variable simultaneityCount. If this total exceeds the limit simultaneityCountLimit (specified within the 
 		# method), then the variable existingMeasure is updated.
 		simultaneityCountLimit = 5
-		combinedInput = np.zeros(len(setOfInputs), dtype=int)  # Initialize combinedInput as a NumPy array
 
-		for period in range(40):
-			inputs = self.getSpikesInNextTimeslot()  # Get spikes for the entire period at once
-			
-			# Update combinedInput based on the indices in setOfInputs
-			for i, soi in enumerate(setOfInputs):
-				if inputs[soi] == 1:
-					combinedInput[i] = 1
+		for period in (range(40)):
+			combinedInput = np.zeros(len(setOfInputs), dtype=int)
 
-		simultaneityCount = np.sum(combinedInput)  # Count the total spikes in combinedInput
-		if simultaneityCount > simultaneityCountLimit:
-			existingMeasure += combinedInput  # Update existingMeasure in one go
+			# Accumulate spikes over 15 timesteps
+			for _ in range(15):
+				inputs = self.getSpikesInNextTimeslot()
+				for i, soi in enumerate(setOfInputs):
+					if inputs[soi] == 1:
+						combinedInput[i] = 1
+
+			# Only update if co-activation exceeds threshold
+			simultaneityCount = np.sum(combinedInput)
+			if simultaneityCount > simultaneityCountLimit:
+				existingMeasure += combinedInput
 
 		return existingMeasure
 
@@ -98,7 +101,7 @@ class InputState:
 		# currentPhase := CurrentPhase.  This global is no longer used.  This method is historical so if it is 
 		# implemented you should uncomments this and create the Global CurrentPhase  (RJT)
 
-		spikes = [0]*len(self.category)
+		spikes = np.zeros(len(self.category), dtype=int)
 
 		# SPIKE PROBABILITIES IN category ARE NUMBERS FROM 1 TO 200 currentInputSpikeProbability IS A NUMBER 
 		# BETWEEN 0 AND 200. A RANDOM NUMBER IS SELECTED FROM IntegerCollectionForInputStateGeneration, WHICH 

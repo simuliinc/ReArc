@@ -24,6 +24,10 @@ class CorticalColumn:
 		assert threshold != None
 		neuron = PyramidalNeuron(config['numOfBasilDendriteBranches'], config['dendriteThreshold'], \
 						   config['numOfInputs'], config['inputs'], config['source'], config['managementInputs'])
+		
+		if corticalLayer == 3: # basal dendrite threshold is set to the global threshold
+			neuron.basalDendrite.changeThreshold(CorticalBasalDendriteThreshold)
+
 		self.getLayer(corticalLayer).pyramidalNeurons.append(neuron)
 		for i in range(config['numOfProximalInputs']):
 			# i is zero based so connections start at 0 (RJT)
@@ -39,8 +43,10 @@ class CorticalColumn:
 		# RANDOMLY SELECTED PYRAMIDALS IN ITS OWN COLUMN
 
 		config = self.configForLayer(corticalLayer, threshold, list(range(PyramidalsPerColumnLayerOne)))
-		neuron = InhibitoryInterneuron(threshold)
+		# print("NumberOfColumns: ", NumberOfColumns)
+		neuron = InhibitoryInterneuron(threshold, NumberOfColumns=NumberOfColumns)
 		self.getLayer(corticalLayer).interneurons.append(neuron)
+
 		for column in range(NumberOfColumns):
 			if column == columnNumber:
 				for connection in range(config['interNuronConnectoiosToOwnColumn']):
@@ -89,45 +95,60 @@ class CorticalColumn:
 					# only cortical layer1 uses the layerOneBiasedInputPopulation, Layer 2 and 3 use random numbers from 1 to 50 inclusive (RJT)
 					inputs = range(1,51)
 
-	def presentInputs(self, conditionDefiningInputs, managementInputs, multipleSource = False):
-		# Recording management inputs are only provided to layer three pyramidal neurons
-		layerOneOutputs = []
-		layerTwoOutputs = []
-		layerThreeOutputs = []
-		columnActivity = []
+	def presentInputs(self, conditionDefiningInputs, managementInputs, multipleSource=False):
+		# Reset all activity lists
+		for layer_num in range(1, 4):
+			self.getLayer(layer_num).pyramidalActivity = []
+		# Process each layer separately, similar to Smalltalk
+		layer1_outputs = []
+		layer1 = self.getLayer(1)
+		for neuron in layer1.pyramidalNeurons:
+			interneuron_activity = layer1.interneuronsActivity.copy() if layer1.interneuronsActivity else []
+			# print("conditionDefiningInputs: ", conditionDefiningInputs)
+			# print("interneuron_activity: ", interneuron_activity)
+			# print("multipleSource: ", multipleSource)
+			output = neuron.presentInputs(conditionDefiningInputs, interneuron_activity, multipleSource)
+			layer1_outputs.append(output)
+		layer1.pyramidalActivity = layer1_outputs
+		
+		layer2_outputs = []
+		layer2 = self.getLayer(2)
+		for neuron in layer2.pyramidalNeurons:
+			interneuron_activity = layer2.interneuronsActivity.copy() if layer2.interneuronsActivity else []
+			output = neuron.presentInputs(layer1_outputs, interneuron_activity)
+			layer2_outputs.append(output)
+		layer2.pyramidalActivity = layer2_outputs
 
-		for corticalLayerNumber in range(1,4):
-			corticalLayer = self.getLayer(corticalLayerNumber)
-			previousLayer = self.getLayer(max(corticalLayerNumber - 1, 1))
-			for neuron in corticalLayer.pyramidalNeurons:
-				if corticalLayerNumber == 1:
-					corticalLayer.pyramidalActivity.append(neuron.presentInputs(conditionDefiningInputs, corticalLayer.interneuronsActivity, multipleSource))
-					layerOneOutputs.append(corticalLayer.pyramidalActivity[-1])
-				elif corticalLayerNumber == 2:
-					corticalLayer.pyramidalActivity.append(neuron.presentInputs(previousLayer.pyramidalActivity, corticalLayer.interneuronsActivity))
-					layerTwoOutputs.append(corticalLayer.pyramidalActivity[-1])
-				elif corticalLayerNumber == 3:
-					corticalLayer.pyramidalActivity.append(neuron.presentInputs(previousLayer.pyramidalActivity, [], False, managementInputs))
-					layerThreeOutputs.append(corticalLayer.pyramidalActivity[-1])
-				else:
-					assert False, "we currently only suport 3 layers"
-				assert corticalLayer.pyramidalActivity[-1] != None
+		
+		layer3_outputs = []
+		layer3 = self.getLayer(3)
+		for neuron in layer3.pyramidalNeurons:
+			output = neuron.presentInputs(layer2_outputs, [], False, managementInputs)
+			layer3_outputs.append(output)
+		layer3.pyramidalActivity = layer3_outputs
 
-		columnActivity.append(layerOneOutputs)
-		columnActivity.append(layerTwoOutputs)
-		columnActivity.append(layerThreeOutputs)
-		return columnActivity
-		# return list(map( lambda x : x.pyramidalActivity, self.layers))
+		# Return structure matching Smalltalk
+		column_activity = [layer1_outputs, layer2_outputs, layer3_outputs]
+		return column_activity
 
 	def updateInterneuronActivityForLayer(self, corticalLayerNumber):
 		corticalLayer = self.getLayer(corticalLayerNumber)
 		for interNeuron, pryamidalActivity in zip(corticalLayer.interneurons, corticalLayer.pyramidalActivity):
-			corticalLayer.interneuronsActivity.append(interNeuron.presentInputs(pryamidalActivity,[], True, []))
-			
+			corticalLayer.interneuronsActivity.append(interNeuron.presentInputsFromMultipleSources(pryamidalActivity,[], True, []))
+	
+	def updateInterneuronActivityForLayerWithCurrentOutputs(self, corticalLayerNumber, currentOutputs):
+		corticalLayer = self.getLayer(corticalLayerNumber)
+		corticalLayer.interneuronsActivity = []  # Reset activity list
+		# print("currentOutputs: ", currentOutputs)
+		for i, interneuron in enumerate(corticalLayer.interneurons):
+			# Following the Smalltalk implementation where each interneuron processes inputs from multiple sources
+			activity = interneuron.presentInputsFromMultipleSources(currentOutputs, [], True, [])  # True for multipleSource
+			corticalLayer.interneuronsActivity.append(activity)
+
 	def updateInterneuronActivityInternalConnectivityOnly(self, corticalLayerNumber):
 		corticalLayer = self.getLayer(corticalLayerNumber)
 		for interNeuron, pryamidalActivity in zip(corticalLayer.interneurons, corticalLayer.pyramidalActivity):
-			corticalLayer.interneuronsActivity.append(interNeuron.presentInputs(pryamidalActivity,[], False, []))
+			corticalLayer.interneuronsActivity.append(interNeuron.presentInputsFromMultipleSources(pryamidalActivity,[], False, []))
 	
 	def configForLayer(self, corticalLayer, threshold, inputs, source=None):
 		if corticalLayer == 1:
