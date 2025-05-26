@@ -5,10 +5,10 @@ from Dendrites import *
 
 class PyramidalNeuron:
 
-	def __init__(self, numOfBasilDendriteBranches, threshold, numOfInputs, inputs, source=None, managementInputs=0):
+	def __init__(self, numOfBasilDendriteBranches, threshold, numOfInputs, inputs, source=None, managementInputs=0, weight=None):
 		self.apicalDendrite = ApicalDendrite()
 		self.basalDendrite = BasilDendrite(numOfBasilDendriteBranches, threshold, numOfInputs, \
-									  inputs, source, managementInputs)
+									  inputs, source, managementInputs, weight=weight)
 		self.potentialRecord = PotentialRecord()
 		self.timeSincePreviousFiring = 48
 		self.threshold = CorticalBasalDendriteThreshold

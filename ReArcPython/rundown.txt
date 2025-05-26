@@ -1,0 +1,38 @@
+Globals
+
+Type A Brainrun
+
+addInputSimultaneityMeasureForOnePeriod	forInputCombination:
+	getSpikesInNextTimeslot
+
+configureFirstArea
+
+presentTripleCategoryInstance: with second and third
+	getSpikesInNextTimeslot: with third category
+	presentInputsInOneTimeslotToArea1WithBlackBoxHippocampus:
+		presentInputsInOneTimeslotToCorticalArea: withRecordingManagement
+			presentInputsToColumn: with RecordingManagement
+				presentExcitatoryInputsToPyramidalNeuron: with Interneuron
+					Dendrite presentExcitatoryInputs: withModulatoryInputs:
+						Branch ​​presentSingleSourceExcitatoryInputsToBranch:
+				
+				presentExcitatoryInputsToPyramidalNeuron: with RecordM
+					Dendrite presentExcitatoryInputs: withRecordM
+						Branch presentExcitatoryInputsToBranch:
+							Branch presentMultipleSourceExcitatoryInputsToBranch: with RecordM
+							Branch presentSingleSourceExcitatoryInputsToBranch: with RecordM
+
+			updateLayer[LAYER]InterneuronActivity:
+
+updateHippocampalRecordsForMultipleModulationCycles:
+	determineColumnActivityOver75timeslotsForEachModulation
+	determineIntermediateLayerColumnActivityOver75timeslotsForEachModulation
+eliminateColumnsWithStrongLayerThreeActivity			
+constructMultiplexedOutputsForNext25milliseconds
+
+	totalAcrossTimeslots:
+
+
+CategoryIdentifications
+
+CalculationOfColumnWeightsInFavourOfThirtyCategories

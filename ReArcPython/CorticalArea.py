@@ -13,12 +13,11 @@ class CorticalArea:
 
 	def addPyramidalToLayerQtyThreshold(self, corticalLayer, numberOfPyramidalsToAdd, \
 										threshold = CorticalBasalDendriteThreshold, inputs={}, source=None):
-		if corticalLayer == 3:
-			print("corticalLayer: ", corticalLayer)
 		for i in range(numberOfPyramidalsToAdd):
 			for j, column in enumerate(self.columns):
 				print("Threshold: ", threshold)
 				column.addPyramidalToLayer(corticalLayer, threshold, inputs[j], source)
+				column.getLayer(corticalLayer).pyramidalActivity.append(False)
 
 	def addInterneuronToLayerWithThreshold(self, corticalLayer, numberOfInterneuronsToAdd, threshold):
 		for i in range(numberOfInterneuronsToAdd):

@@ -23,10 +23,10 @@ class CorticalColumn:
 		# layer (RJT)
 		assert threshold != None
 		neuron = PyramidalNeuron(config['numOfBasilDendriteBranches'], config['dendriteThreshold'], \
-						   config['numOfInputs'], config['inputs'], config['source'], config['managementInputs'])
+						   config['numOfInputs'], config['inputs'], config['source'], config['managementInputs'], config['excitatoryInputWeight'])
 		
 		if corticalLayer == 3: # basal dendrite threshold is set to the global threshold
-			neuron.basalDendrite.changeThreshold(CorticalBasalDendriteThreshold)
+			neuron.basalDendrite.changeThreshold(CorticalLayerThreeBasalDendriteThreshold)
 
 		self.getLayer(corticalLayer).pyramidalNeurons.append(neuron)
 		for i in range(config['numOfProximalInputs']):
@@ -173,6 +173,7 @@ class CorticalColumn:
 		pyramidalConfig['managementInputs'] = 0
 		pyramidalConfig['interNuronConnectionsFromEach'] = NumberOfInputsToLayerOneInterneuronsFromEachOtherColumn
 		pyramidalConfig['interNuronConnectoiosToOwnColumn'] = NumberOfInputsToLayerOneInterneuronsFromOwnColumn
+		pyramidalConfig['excitatoryInputWeight'] = None
 
 		return pyramidalConfig
 
@@ -185,11 +186,12 @@ class CorticalColumn:
 		pyramidalConfig['dendriteThreshold'] = threshold
 		# should we adapt to the starting at 1 in smalltalk or adopt to the starting at 0 in Python
 		# lets adpot 0 index start from Python (RJT)
-		pyramidalConfig['inputs'] = list(range(PyramidalsPerColumnLayerTwo))
+		pyramidalConfig['inputs'] = list(range(PyramidalsPerColumnLayerOne))
 		pyramidalConfig['source'] = None
 		pyramidalConfig['managementInputs'] = 0
 		pyramidalConfig['interNuronConnectionsFromEach'] = NumberOfInputsToLayerTwoInterneuronsFromEachOtherColumn
 		pyramidalConfig['interNuronConnectoiosToOwnColumn'] = NumberOfInputsToLayerTwoInterneuronsFromOwnColumn
+		pyramidalConfig['excitatoryInputWeight'] = None
 
 		return pyramidalConfig
 		 
@@ -205,6 +207,7 @@ class CorticalColumn:
 		pyramidalConfig['managementInputs'] = NumberOfConditionRecordingOutputsFromBlackBoxHippocampus
 		pyramidalConfig['interNuronConnectionsFromEach'] = 0
 		pyramidalConfig['interNuronConnectoiosToOwnColumn'] = 0
+		pyramidalConfig['excitatoryInputWeight'] = InitialLayerThreeSynapticWeight
 		return pyramidalConfig
 
 # a Cortical Layer is organization of neurons that has different connections and attributes, typically in the human brain there are 6 layers

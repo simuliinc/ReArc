@@ -12,7 +12,7 @@ import numpy as np
 
 class DendriteBranch:
 
-	def __init__(self, threshold, numOfInputs, inputs, source, managementInputs):
+	def __init__(self, threshold, numOfInputs, inputs, source, managementInputs, weight=None):
 		self.conditionPermanence = False
 		self.excitatoryInputs = []
 		self.inhibitoryInputs = []
@@ -29,7 +29,10 @@ class DendriteBranch:
 			if source:
 				self.addExcitatoryInputFromSource(random.choice(inputs), random.choice(source))
 			else:
-				self.addExcitatoryInput(random.choice(inputs))
+				if weight:
+					self.addExcitatoryInput(random.choice(inputs), weight)
+				else:
+					self.addExcitatoryInput(random.choice(inputs))
 		if managementInputs:
 			for i in range(managementInputs):
 				self.addConditionRecordingManagementInput(i)
@@ -126,6 +129,8 @@ class DendriteBranch:
 			self.potentialRecord.reset()
 			self.timeSinceLastActivityOfBranch = 0
 			self.branchFirings += 1
+		else:
+			self.firingStatus = False	
 
 		return self.firingStatus
 	
@@ -205,7 +210,7 @@ class DendriteBranch:
 		for input in self.excitatoryInputs:
 			input.reduceSynapticWeight(proportion)
 
-	def addExcitatoryInput(self, connection):
+	def addExcitatoryInput(self, connection, weight=CorticalConditionDefiningInputWeight):
 		# Adds a connection identity (connection) to excitatoryInputs, makes the corresponding connection weight 
 		# 10 in excitatoryInputWeights, and makes the time since the input was last active 100 timeslots in 
 		# recentActivityOfExcitatoryInputs.  
@@ -221,7 +226,7 @@ class DendriteBranch:
 		# This will be achieved by setting its corresponding lastIncreaseInExcitatoryWeights element to false.
 
 		input = ExcitatoryInput(connection)
-		input.weight = CorticalConditionDefiningInputWeight
+		input.weight = weight
 		input.recentActivity = 100
 		input.branchFiringSinceWeightChange = True
 		self.excitatoryInputs.append(input)	

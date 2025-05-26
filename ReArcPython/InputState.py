@@ -79,7 +79,9 @@ class InputState:
 			# Only update if co-activation exceeds threshold
 			simultaneityCount = np.sum(combinedInput)
 			if simultaneityCount > simultaneityCountLimit:
-				existingMeasure += combinedInput
+				for i in range(len(setOfInputs)):
+					if combinedInput[i] == 1:
+						existingMeasure[i] += 1
 
 		return existingMeasure
 

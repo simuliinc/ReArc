@@ -7,13 +7,13 @@ import itertools
 from DendriteBranch import *
 
 class ApicalDendrite:
-	def __init__(self, numOfBranches=0, threshold=None, numOfInputs = 0, inputs=[], source = None, managementInputs = 0):
+	def __init__(self, numOfBranches=0, threshold=None, numOfInputs = 0, inputs=[], source = None, managementInputs = 0, weight=None):
 		self.proximalInputs = []
 		self.proximalInputWeights = []
 		self.distalBranches = []
-		self.addDendriteBranches(numOfBranches, threshold, numOfInputs, inputs, source)
+		self.addDendriteBranches(numOfBranches, threshold, numOfInputs, inputs, source, managementInputs=managementInputs, weight=weight)
 		self.potentialRecord = PotentialRecord()
-		self.threshold = threshold  #CorticalApicalDendriteThreshold
+		self.threshold = CorticalBasalDendriteThreshold  #CorticalApicalDendriteThreshold
 		self.firingStatus = False
 
 	def adjustWeightsOfRecentlyActiveInputs(self, multipleSources = False, source=None):
@@ -39,12 +39,12 @@ class ApicalDendrite:
 	# def addNewProximalInputWeight(self, weight):
 	# 	self.proximalInputWeights.append(weight)
 
-	def addDendriteBranch(self, threshold, numOfInputs, inputs, source = None, managementInputs = 0):
-		self.distalBranches.append(DendriteBranch(threshold, numOfInputs, inputs, source, managementInputs))
+	def addDendriteBranch(self, threshold, numOfInputs, inputs, source = None, managementInputs = 0, weight=None):
+		self.distalBranches.append(DendriteBranch(threshold, numOfInputs, inputs, source, managementInputs, weight=weight))
 	
-	def addDendriteBranches(self, numberOfBranches, threshold, numOfInputs, inputs, source = None, managementInputs = 0):
+	def addDendriteBranches(self, numberOfBranches, threshold, numOfInputs, inputs, source = None, managementInputs = 0, weight=None):
 		for i in range(numberOfBranches):
-			self.addDendriteBranch(threshold, numOfInputs, inputs, managementInputs, source)
+			self.addDendriteBranch(threshold, numOfInputs, inputs, source, managementInputs, weight=weight)
 
 	def reduceSynapticWeights(self, proportion):
 		for branch in self.distalBranches:
@@ -128,8 +128,8 @@ class ApicalDendrite:
 
 class BasilDendrite(ApicalDendrite):
 	def __init__(self, numOfBranches = 0, threshold = CorticalBasalDendriteThreshold, numOfInputs = 0, \
-			  inputs = [], source = None, managementInputs = 0):
-		super().__init__(numOfBranches, threshold, numOfInputs, inputs, source, managementInputs)
+			  inputs = [], source = None, managementInputs = 0, weight=None):
+		super().__init__(numOfBranches, threshold, numOfInputs, inputs, source, managementInputs, weight=weight)
 		assert self.threshold != None
 
 class InhibitoryInterneuron(ApicalDendrite):
@@ -145,6 +145,7 @@ class InhibitoryInterneuron(ApicalDendrite):
 
 		# doing it for multiple inputs
 		self.proximalInputs = [[] for _ in range(NumberOfColumns)]
+		self.proximalInputWeights = [[] for _ in range(NumberOfColumns)]
 
 
 

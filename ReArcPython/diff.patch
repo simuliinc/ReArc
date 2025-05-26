@@ -1,0 +1,638 @@
+diff --git a/ReArcPython/Brain.py b/ReArcPython/Brain.py
+index 0b9218e..c81d294 100644
+--- a/ReArcPython/Brain.py
++++ b/ReArcPython/Brain.py
+@@ -5,6 +5,7 @@ from Globals import *
+ from PresentOneCategoryInstance import *
+ from InputState import *
+ import numpy as np
++import itertools
+ 
+ class Brain:
+ 	def __init__(self, numberOfCorticalAreas=3):
+@@ -43,8 +44,8 @@ class Brain:
+ 		for currentColumn in range(NumberOfColumns):
+ 			inputPopulation[currentColumn] = list(range(InputSpaceSize))
+ 			for i in range(BiasOnFavouredInputs):
+-				for j in favouredInputs[currentColumn]:
+-					inputPopulation[currentColumn].append(j)
++				for j in range(len(favouredInputs)):
++					inputPopulation[currentColumn].append(favouredInputs[currentColumn][j])
+ 
+ 		self.visualCortex[0].addColumnQty(NumberOfColumns)
+ 		self.visualCortex[0].addPyramidalToLayerQtyThreshold(1, PyramidalsPerColumnLayerOne, DendriticBranchThresholdLayerOne, inputPopulation)
+@@ -195,18 +196,21 @@ class Brain:
+ 		if not recentPresentationOutputs or not recentPresentationOutputs[0]:
+ 			return []
+ 		
+-		# Initialize t2 with zeros based on first presentation's size
+-		t2 = [0] * len(recentPresentationOutputs[0])
++		# Get number of columns from first timeslot
++		num_columns = len(recentPresentationOutputs[0])
+ 		
+-		# For each presentation (t7)
++		# Initialize column totals with zeros
++		column_totals = [0] * num_columns
++		
++		# For each timeslot's presentation output
+ 		for presentation in recentPresentationOutputs:
+-			# For each timeslot (t5)
+-			for t5 in range(len(presentation)):
+-				# Add the total from this layer at this timeslot
++			# For each column
++			for column_idx in range(num_columns):
++				# Add the spike count from this layer at this column
+ 				# Note: layer-1 for 0-based indexing
+-				t2[t5] += sum(presentation[t5][layer-1])
++				column_totals[column_idx] += sum(presentation[column_idx][layer-1])
+ 		
+-		return t2
++		return column_totals
+ 	
+ 	def presentDoubleCategoryInstanceWithSecondCategory(self, categoryInputSource, secondCategoryInputSource):
+ 
+@@ -294,13 +298,12 @@ class Brain:
+ 		
+ 		# For each of the 8 modulation periods
+ 		for j in range(8):
+-			period_start = 75 * j + start + 1
++			period_start = 75 * j + start
+ 			period_end = 75 * j + stop
+ 			
+ 			# Collect outputs for this period if within bounds
+ 			for k in range(period_start, period_end + 1):
+ 				if k < len(inputResults):
+-					# currentPresentationOutputs.append(inputResults[k])
+ 					currentPresentationOutputs.append(Y[k])
+ 		
+ 		# Calculate totals across timeslots for layer 3 and add to PresentationResults
+@@ -338,14 +341,14 @@ class Brain:
+ 		t5 = Y[-600:]
+ 		
+ 		# Process each category's modulation slots and add to PresentationResults
+-		# First category (timeslots 1-21)
+-		self.addModulationSlots(t5, 0, 21, Y) # 0 index is 1 in Smalltalk
++		# First category (timeslots 1-21 in Smalltalk, 0-20 in Python 0-based indexing)
++		self.addModulationSlots(t5, 0, 20, Y)
+ 
+-		# Second category (timeslots 48-71)
+-		self.addModulationSlots(t5, 47, 71, Y) # 0 index is 1 in Smalltalk
++		# Second category (timeslots 48-71 in Smalltalk, 47-70 in Python 0-based indexing)
++		self.addModulationSlots(t5, 47, 70, Y)
+ 
+-		# Third category (timeslots 27-45)
+-		self.addModulationSlots(t5, 26, 45, Y) # 0 index is 1 in Smalltalk
++		# Third category (timeslots 27-45 in Smalltalk, 26-44 in Python 0-based indexing)
++		self.addModulationSlots(t5, 26, 44, Y)
+ 
+ 		Y = []
+ 		
+@@ -371,15 +374,17 @@ class Brain:
+ 		categoryIdentifications = np.zeros((numPresentations, 3))
+ 		
+ 		# Calculate category weights for all presentations at once
+-		# Matrix multiplication of results and weights
+-		categoryWeights = np.dot(results[presentationStart:presentationStop+1], weights.T)
++		# The Smalltalk version uses 1-based inclusive indices. Translate to 0-based, inclusive start & stop.
++		sliceStart = presentationStart - 1  # 0-based inclusive
++		sliceStopExclusive = presentationStop  # already exclusive for Python slicing
++		categoryWeights = np.dot(results[sliceStart:sliceStopExclusive], weights.T)
+ 		
+ 		# Find top 3 categories for each presentation
+ 		for i in range(numPresentations):
+ 			# Get indices of top 3 maximum values
+ 			top3_indices = np.argpartition(categoryWeights[i], -3)[-3:]
+ 			# Sort them by their values in descending order
+-			top3_indices = top3_indices[np.argsort(-categoryWeights[i][top3_indices])]
++			top3_indices = top3_indices[np.argsort(-categoryWeights[i][top3_indices])] + 1 # 1-based indexing
+ 			categoryIdentifications[i] = top3_indices
+ 		
+ 		return categoryIdentifications
+@@ -394,13 +399,13 @@ class Brain:
+ 
+ 		# Initialize column weights for categories (1-based indexing to match Smalltalk)
+ 		# Add an extra row at index 0 that won't be used to maintain 1-based indexing
+-		columnWeightsInFavourOfCategories = np.zeros((numberOfCategories + 1, numberOfColumns), dtype=int)
++		columnWeightsInFavourOfCategories = np.zeros((numberOfCategories + 1, numberOfColumns), dtype=float)
+ 
+ 		# Create target array with 1-based category indices
+ 		# In Smalltalk this was: 1 to: (numberOfPresentations/numberOfCategories) do: [:cat1|
+ 		#                           1 to: numberOfCategories do: [:k| target addLast: k]
+ 		target = []
+-		for _ in range(numberOfPresentations // numberOfCategories):
++		for _ in range(int(numberOfPresentations / numberOfCategories)):
+ 			for k in range(1, numberOfCategories + 1):
+ 				target.append(k)
+ 
+@@ -417,11 +422,11 @@ class Brain:
+ 				currentCategoryWeightInCurrentPresentation = 0
+ 				
+ 				# Calculate weight for this category (matching Smalltalk's explicit iteration)
+-				for col2 in range(numberOfColumns):
++				for col2 in range(len(currentPresentation)):
+ 					currentCategoryWeightInCurrentPresentation += (
+ 						currentPresentation[col2] * referenceWeightsOfCurrentCategory[col2]
+ 					)
+-				weightsOfCategoriesInCurrentPresentation[cat2] = currentCategoryWeightInCurrentPresentation
++				weightsOfCategoriesInCurrentPresentation[cat2].append(currentCategoryWeightInCurrentPresentation)
+ 			
+ 			# Find category with largest weight (adjusting for 1-based indexing)
+ 			selectedCategory = np.argmax(weightsOfCategoriesInCurrentPresentation)
+@@ -433,11 +438,9 @@ class Brain:
+ 			
+ 			# If selection was incorrect, reduce weights for incorrectly selected category
+ 			if selectedCategory != currentIdentity:
+-				for col4 in range(numberOfColumns):
+-					if currentPresentation[col4] > 0:
+-						columnWeightsInFavourOfCategories[selectedCategory][col4] = int(
+-							columnWeightsInFavourOfCategories[selectedCategory][col4] / weightReductionFactor
+-						)
++				for col5 in range(numberOfColumns):
++					if currentPresentation[col5] > 0:
++						columnWeightsInFavourOfCategories[selectedCategory][col5] /= weightReductionFactor
+ 
+ 		return columnWeightsInFavourOfCategories[1:]  # Remove the padding row we added for 1-based indexing
+ 
+@@ -451,6 +454,4 @@ class BrainActivity:
+ 	# and 1 potential spike for the layer 3
+ 
+ 	def __init__(self, timeSlot, column, layer, spikes):
+-		pass
+-
+-
++		pass
+\ No newline at end of file
+diff --git a/ReArcPython/BrainRun.py b/ReArcPython/BrainRun.py
+index ff5778f..988c568 100644
+--- a/ReArcPython/BrainRun.py
++++ b/ReArcPython/BrainRun.py
+@@ -63,7 +63,7 @@ def typeABrainRun():
+ 	# AT LEAST 5 OTHER INPUTS IN THE 50, IN PERIODS OF 15 TIMECYCLES (5 MILLISECONDS) WITHIN 10 200 
+ 	# MILLISECOND PRESENTATIONS OF EACH OF FIVE CATEGORIES.
+ 	print("Calculating FavoredInputs\n")
+-	favouredInputs = []
++	# favouredInputs = []
+ 	# for ii in tqdm(range(NumberOfColumns)): # NumberOfColumns = 15
+ 	# 	startingSelection = set()
+ 	# 	for randomInputs in range(50):
+@@ -80,18 +80,39 @@ def typeABrainRun():
+ 
+ 	# The favoured inputs are recorded for later analysis if required
+ 	# FavoredInputs = favouredInputs
+-	favouredInputs = [[267, 38, 346, 309, 14, 325, 122, 12, 103, 96, 40, 341, 214, 45, 291, 1, 374, 307, 59, 50, 28, 334, 285, 89, 159], [134, 5, 304, 69, 319, 284, 357, 149, 119, 58, 72, 188, 217, 92, 291, 352, 330, 323, 3, 88, 365, 286, 302, 32, 83], [162, 105, 359, 5, 133, 107, 255, 299, 166, 86, 154, 284, 303, 188, 374, 326, 66, 311, 42, 142, 300, 122, 59, 197, 367], [109, 337, 124, 105, 63, 51, 188, 218, 333, 335, 127, 193, 291, 231, 156, 202, 40, 217, 142, 314, 184, 100, 347, 330, 382], [55, 312, 196, 154, 86, 130, 96, 119, 357, 188, 265, 268, 187, 346, 212, 76, 200, 327, 70, 1, 349, 21, 90, 385, 27], [359, 93, 236, 134, 398, 391, 353, 56, 14, 138, 341, 137, 306, 334, 61, 111, 367, 184, 78, 340, 27, 330, 217, 87, 349], [5, 376, 196, 304, 270, 144, 218, 56, 325, 303, 380, 50, 352, 12, 136, 334, 10, 279, 42, 272, 59, 287, 308, 123, 254], [162, 93, 236, 341, 304, 103, 86, 119, 17, 43, 374, 326, 136, 70, 3, 231, 32, 131, 363, 352, 367, 307, 147, 112, 117], [376, 170, 5, 267, 18, 357, 211, 392, 240, 278, 297, 101, 57, 363, 172, 164, 290, 122, 66, 367, 127, 70, 3, 233, 197], [252, 5, 69, 49, 304, 305, 270, 119, 336, 263, 325, 357, 14, 16, 103, 138, 382, 300, 363, 92, 374, 122, 266, 251, 393], [162, 105, 6, 267, 5, 219, 102, 346, 133, 48, 43, 375, 16, 329, 263, 137, 144, 319, 233, 251, 32, 257, 90, 176, 343], [86, 376, 258, 154, 166, 391, 172, 150, 149, 34, 92, 333, 325, 188, 327, 58, 90, 142, 85, 62, 368, 399, 248, 208, 293], [252, 162, 152, 166, 98, 211, 357, 353, 14, 309, 150, 240, 299, 96, 135, 85, 91, 365, 297, 45, 138, 65, 3, 100, 62], [204, 225, 124, 392, 175, 346, 72, 368, 380, 62, 10, 100, 299, 14, 147, 50, 40, 323, 117, 28, 192, 352, 293, 248, 71], [219, 220, 187, 18, 149, 391, 10, 153, 166, 90, 62, 231, 61, 290, 374, 329, 45, 78, 335, 367, 65, 87, 343, 251, 176]]
++	favouredInputs = [[256, 0, 387, 4, 391, 392, 265, 267, 396, 399, 275, 22, 156, 287, 34, 164, 37, 171, 173, 176, 51, 308, 59, 316, 319],
++	[131, 260, 261, 389, 8, 392, 138, 148, 153, 26, 29, 157, 38, 41, 42, 47, 177, 50, 58, 188, 317, 62, 65, 196, 197],
++	[261, 134, 140, 143, 399, 148, 21, 283, 156, 285, 157, 286, 287, 290, 37, 295, 296, 171, 172, 302, 175, 177, 49, 305, 310],
++	[6, 137, 10, 141, 271, 16, 147, 149, 284, 287, 288, 160, 167, 298, 303, 180, 56, 57, 186, 59, 313, 317, 322, 66, 196],
++	[0, 388, 391, 393, 10, 139, 140, 141, 143, 272, 19, 148, 147, 278, 286, 33, 36, 42, 301, 177, 307, 314, 58, 317, 61],
++	[0, 382, 131, 260, 132, 133, 135, 2, 262, 11, 268, 272, 147, 276, 278, 31, 32, 289, 33, 296, 297, 43, 300, 49, 309],
++	[1, 388, 265, 268, 275, 22, 30, 288, 32, 163, 291, 296, 43, 44, 176, 177, 306, 309, 312, 57, 184, 59, 320, 322, 198],
++	[392, 265, 395, 11, 269, 13, 272, 148, 277, 22, 150, 23, 291, 165, 168, 169, 298, 299, 45, 302, 59, 191, 323, 69, 332],
++	[256, 384, 386, 132, 260, 391, 267, 12, 142, 148, 150, 152, 281, 154, 282, 285, 31, 161, 35, 293, 41, 306, 180, 57, 318],
++	[4, 391, 393, 395, 398, 143, 274, 18, 275, 278, 279, 24, 154, 28, 33, 162, 290, 163, 165, 36, 164, 180, 311, 56, 188],
++	[389, 11, 17, 274, 277, 150, 278, 280, 154, 285, 159, 40, 169, 172, 44, 305, 307, 179, 53, 310, 54, 186, 316, 189, 60],
++	[128, 385, 257, 4, 6, 391, 140, 269, 272, 274, 19, 21, 153, 154, 29, 289, 291, 292, 46, 308, 316, 318, 320, 64, 195],
++	[384, 259, 7, 137, 141, 271, 144, 273, 274, 21, 286, 159, 40, 297, 298, 301, 173, 47, 180, 310, 312, 314, 58, 328, 73],
++	[129, 2, 268, 269, 14, 146, 19, 21, 278, 151, 280, 157, 285, 288, 163, 37, 38, 293, 165, 295, 44, 173, 46, 314, 190],
++	[384, 258, 386, 391, 270, 398, 150, 152, 292, 42, 45, 303, 177, 54, 55, 324, 328, 329, 332, 204, 79, 80, 338, 211, 84]]
+ 	FavoredInputs = favouredInputs
+ 	# Store favored inputs to file
+-	# with open('favoredInputs.txt', 'w') as f:
+-	# 	f.write('Favored Inputs:\n')
+-	# 	for i, inputs in enumerate(FavoredInputs):
+-	# 		f.write(f'Column {i}: {inputs}\n')
++	with open('favoredInputs.txt', 'w') as f:
++		f.write('Favored Inputs:\n')
++		for i, inputs in enumerate(FavoredInputs):
++			f.write(f'Column {i}: {inputs}\n')
+ 	print(FavoredInputs)
+ 	print("Configuring the Brain\n")
+ 	brain = Brain(2)
+ 	brain.configureFirstArea(favouredInputs)
+ 
++	# Create all InputState objects once at the beginning 
++	# This ensures they maintain their phase across presentations
++	print("Creating category input states\n")
++	category_input_states = []
++	for i in range(30):
++		category_input_states.append(spikeEvaluator.asInputState(i))
++
+ 	# Each category instance is presented for 200 milliseconds. The black box thalamus puts a 40 Hz 
+ 	# frequency modulation on the spikes so that they are much more likely to occur within a 
+ 	# 5 millisecond segment of each 25 millisecond modulation interval. To save on computation 
+@@ -103,11 +124,13 @@ def typeABrainRun():
+ 	for presentationCycle in tqdm(range(cycles)):
+ 		startCycleTime = datetime.now()
+ 		print ("Cycle: "+str(presentationCycle)+" of "+str(cycles)+"\n", flush=True)
+-		for category in tqdm(range(0,30,3)):  # Test 30 categories
+-			# print ("Category: "+str(category)+"-"+str(category+2)+" of 30\n", flush=True)
+-			brain.presentTripleCategoryInstance(spikeEvaluator.asInputState(category), 
+-				spikeEvaluator.asInputState(category + 1),
+-				spikeEvaluator.asInputState(category + 2))
++		for category_base in tqdm(range(0, 30, 3)):  # Test 30 categories
++			brain.presentTripleCategoryInstance(
++				category_input_states[category_base], 
++				category_input_states[category_base + 1],
++				category_input_states[category_base + 2]
++			)
++			print(PresentationResults)
+ 		
+ 		# Write current PresentationResults to file
+ 		# with open('result.txt', 'w') as f:
+@@ -119,9 +142,12 @@ def typeABrainRun():
+ 		print('Time to run cycle: '+repr(endCycleTime-startCycleTime), flush=True)
+ 	endTime = datetime.now()
+ 	# presentationResults = brain.reportPresentationResultsLayer3(Y[-599:])
+-	columnWeightsInFavourOfCategories = brain.calculationOfColumnWeightsInFavourOfThirtyCategories(PresentationResults, startPoint=601, stopPoint=900, numberOfCategories=30, numberOfColumns=15, weightReductionFactor = 1.035)
+-	categoryIdentifications = brain.categoryIdentifications(PresentationResults, columnWeightsInFavourOfCategories, numberOfCategories = 30, presentationStart=601, presentationStop=900)
+-	print(categoryIdentifications)
++	print(PresentationResults)
++	print(np.unique(PresentationResults, axis=0))
++	columnWeightsInFavourOfCategories = brain.calculationOfColumnWeightsInFavourOfThirtyCategories(PresentationResults, startPoint=601, stopPoint=900, numberOfCategories=30, numberOfColumns=15, weightReductionFactor = WeightReductionFactor)
++	print("Column Weights: ", columnWeightsInFavourOfCategories)
++	categoryIdentifications = brain.categoryIdentifications(PresentationResults, columnWeightsInFavourOfCategories, numberOfCategories = 30, presentationStart=901, presentationStop=1200)
++	print("Cat Identifications: ", categoryIdentifications)
+ 	# Store results to file
+ 	# with open('result.txt', 'w') as f:
+ 	# 	f.write('Category Identifications:\n')
+diff --git a/ReArcPython/CorticalArea.py b/ReArcPython/CorticalArea.py
+index 2060cf0..bdf1af6 100644
+--- a/ReArcPython/CorticalArea.py
++++ b/ReArcPython/CorticalArea.py
+@@ -13,12 +13,11 @@ class CorticalArea:
+ 
+ 	def addPyramidalToLayerQtyThreshold(self, corticalLayer, numberOfPyramidalsToAdd, \
+ 										threshold = CorticalBasalDendriteThreshold, inputs={}, source=None):
+-		if corticalLayer == 3:
+-			print("corticalLayer: ", corticalLayer)
+ 		for i in range(numberOfPyramidalsToAdd):
+ 			for j, column in enumerate(self.columns):
+ 				print("Threshold: ", threshold)
+ 				column.addPyramidalToLayer(corticalLayer, threshold, inputs[j], source)
++				column.getLayer(corticalLayer).pyramidalActivity.append(False)
+ 
+ 	def addInterneuronToLayerWithThreshold(self, corticalLayer, numberOfInterneuronsToAdd, threshold):
+ 		for i in range(numberOfInterneuronsToAdd):
+diff --git a/ReArcPython/CorticalColumn.py b/ReArcPython/CorticalColumn.py
+index f95e61a..0f186c5 100644
+--- a/ReArcPython/CorticalColumn.py
++++ b/ReArcPython/CorticalColumn.py
+@@ -26,7 +26,7 @@ class CorticalColumn:
+ 						   config['numOfInputs'], config['inputs'], config['source'], config['managementInputs'])
+ 		
+ 		if corticalLayer == 3: # basal dendrite threshold is set to the global threshold
+-			neuron.basalDendrite.changeThreshold(CorticalBasalDendriteThreshold)
++			neuron.basalDendrite.changeThreshold(CorticalLayerThreeBasalDendriteThreshold)
+ 
+ 		self.getLayer(corticalLayer).pyramidalNeurons.append(neuron)
+ 		for i in range(config['numOfProximalInputs']):
+@@ -173,6 +173,7 @@ class CorticalColumn:
+ 		pyramidalConfig['managementInputs'] = 0
+ 		pyramidalConfig['interNuronConnectionsFromEach'] = NumberOfInputsToLayerOneInterneuronsFromEachOtherColumn
+ 		pyramidalConfig['interNuronConnectoiosToOwnColumn'] = NumberOfInputsToLayerOneInterneuronsFromOwnColumn
++		pyramidalConfig['excitatoryInputWeight'] = None
+ 
+ 		return pyramidalConfig
+ 
+@@ -185,11 +186,12 @@ class CorticalColumn:
+ 		pyramidalConfig['dendriteThreshold'] = threshold
+ 		# should we adapt to the starting at 1 in smalltalk or adopt to the starting at 0 in Python
+ 		# lets adpot 0 index start from Python (RJT)
+-		pyramidalConfig['inputs'] = list(range(PyramidalsPerColumnLayerTwo))
++		pyramidalConfig['inputs'] = list(range(PyramidalsPerColumnLayerOne))
+ 		pyramidalConfig['source'] = None
+ 		pyramidalConfig['managementInputs'] = 0
+ 		pyramidalConfig['interNuronConnectionsFromEach'] = NumberOfInputsToLayerTwoInterneuronsFromEachOtherColumn
+ 		pyramidalConfig['interNuronConnectoiosToOwnColumn'] = NumberOfInputsToLayerTwoInterneuronsFromOwnColumn
++		pyramidalConfig['excitatoryInputWeight'] = None
+ 
+ 		return pyramidalConfig
+ 		 
+@@ -205,6 +207,7 @@ class CorticalColumn:
+ 		pyramidalConfig['managementInputs'] = NumberOfConditionRecordingOutputsFromBlackBoxHippocampus
+ 		pyramidalConfig['interNuronConnectionsFromEach'] = 0
+ 		pyramidalConfig['interNuronConnectoiosToOwnColumn'] = 0
++		pyramidalConfig['excitatoryInputWeight'] = InitialLayerThreeSynapticWeight
+ 		return pyramidalConfig
+ 
+ # a Cortical Layer is organization of neurons that has different connections and attributes, typically in the human brain there are 6 layers
+diff --git a/ReArcPython/DendriteBranch.py b/ReArcPython/DendriteBranch.py
+index a344ffe..04a3fb0 100644
+--- a/ReArcPython/DendriteBranch.py
++++ b/ReArcPython/DendriteBranch.py
+@@ -12,7 +12,7 @@ import numpy as np
+ 
+ class DendriteBranch:
+ 
+-	def __init__(self, threshold, numOfInputs, inputs, source, managementInputs):
++	def __init__(self, threshold, numOfInputs, inputs, source, managementInputs, weight=None):
+ 		self.conditionPermanence = False
+ 		self.excitatoryInputs = []
+ 		self.inhibitoryInputs = []
+@@ -29,7 +29,10 @@ class DendriteBranch:
+ 			if source:
+ 				self.addExcitatoryInputFromSource(random.choice(inputs), random.choice(source))
+ 			else:
+-				self.addExcitatoryInput(random.choice(inputs))
++				if weight:
++					self.addExcitatoryInput(random.choice(inputs), weight)
++				else:
++					self.addExcitatoryInput(random.choice(inputs))
+ 		if managementInputs:
+ 			for i in range(managementInputs):
+ 				self.addConditionRecordingManagementInput(i)
+@@ -126,6 +129,8 @@ class DendriteBranch:
+ 			self.potentialRecord.reset()
+ 			self.timeSinceLastActivityOfBranch = 0
+ 			self.branchFirings += 1
++		else:
++			self.firingStatus = False	
+ 
+ 		return self.firingStatus
+ 	
+@@ -205,7 +210,7 @@ class DendriteBranch:
+ 		for input in self.excitatoryInputs:
+ 			input.reduceSynapticWeight(proportion)
+ 
+-	def addExcitatoryInput(self, connection):
++	def addExcitatoryInput(self, connection, weight=CorticalConditionDefiningInputWeight):
+ 		# Adds a connection identity (connection) to excitatoryInputs, makes the corresponding connection weight 
+ 		# 10 in excitatoryInputWeights, and makes the time since the input was last active 100 timeslots in 
+ 		# recentActivityOfExcitatoryInputs.  
+@@ -221,7 +226,7 @@ class DendriteBranch:
+ 		# This will be achieved by setting its corresponding lastIncreaseInExcitatoryWeights element to false.
+ 
+ 		input = ExcitatoryInput(connection)
+-		input.weight = CorticalConditionDefiningInputWeight
++		input.weight = weight
+ 		input.recentActivity = 100
+ 		input.branchFiringSinceWeightChange = True
+ 		self.excitatoryInputs.append(input)	
+diff --git a/ReArcPython/Dendrites.py b/ReArcPython/Dendrites.py
+index 91a468d..8dc99e7 100644
+--- a/ReArcPython/Dendrites.py
++++ b/ReArcPython/Dendrites.py
+@@ -7,13 +7,13 @@ import itertools
+ from DendriteBranch import *
+ 
+ class ApicalDendrite:
+-	def __init__(self, numOfBranches=0, threshold=None, numOfInputs = 0, inputs=[], source = None, managementInputs = 0):
++	def __init__(self, numOfBranches=0, threshold=None, numOfInputs = 0, inputs=[], source = None, managementInputs = 0, weight=None):
+ 		self.proximalInputs = []
+ 		self.proximalInputWeights = []
+ 		self.distalBranches = []
+-		self.addDendriteBranches(numOfBranches, threshold, numOfInputs, inputs, source)
++		self.addDendriteBranches(numOfBranches, threshold, numOfInputs, inputs, source, managementInputs=managementInputs, weight=weight)
+ 		self.potentialRecord = PotentialRecord()
+-		self.threshold = threshold  #CorticalApicalDendriteThreshold
++		self.threshold = CorticalBasalDendriteThreshold  #CorticalApicalDendriteThreshold
+ 		self.firingStatus = False
+ 
+ 	def adjustWeightsOfRecentlyActiveInputs(self, multipleSources = False, source=None):
+@@ -39,12 +39,12 @@ class ApicalDendrite:
+ 	# def addNewProximalInputWeight(self, weight):
+ 	# 	self.proximalInputWeights.append(weight)
+ 
+-	def addDendriteBranch(self, threshold, numOfInputs, inputs, source = None, managementInputs = 0):
+-		self.distalBranches.append(DendriteBranch(threshold, numOfInputs, inputs, source, managementInputs))
++	def addDendriteBranch(self, threshold, numOfInputs, inputs, source = None, managementInputs = 0, weight=None):
++		self.distalBranches.append(DendriteBranch(threshold, numOfInputs, inputs, source, managementInputs, weight=weight))
+ 	
+-	def addDendriteBranches(self, numberOfBranches, threshold, numOfInputs, inputs, source = None, managementInputs = 0):
++	def addDendriteBranches(self, numberOfBranches, threshold, numOfInputs, inputs, source = None, managementInputs = 0, weight=None):
+ 		for i in range(numberOfBranches):
+-			self.addDendriteBranch(threshold, numOfInputs, inputs, managementInputs, source)
++			self.addDendriteBranch(threshold, numOfInputs, inputs, source, managementInputs, weight=weight)
+ 
+ 	def reduceSynapticWeights(self, proportion):
+ 		for branch in self.distalBranches:
+@@ -128,8 +128,8 @@ class ApicalDendrite:
+ 
+ class BasilDendrite(ApicalDendrite):
+ 	def __init__(self, numOfBranches = 0, threshold = CorticalBasalDendriteThreshold, numOfInputs = 0, \
+-			  inputs = [], source = None, managementInputs = 0):
+-		super().__init__(numOfBranches, threshold, numOfInputs, inputs, source, managementInputs)
++			  inputs = [], source = None, managementInputs = 0, weight=None):
++		super().__init__(numOfBranches, threshold, numOfInputs, inputs, source, managementInputs, weight=weight)
+ 		assert self.threshold != None
+ 
+ class InhibitoryInterneuron(ApicalDendrite):
+@@ -145,6 +145,7 @@ class InhibitoryInterneuron(ApicalDendrite):
+ 
+ 		# doing it for multiple inputs
+ 		self.proximalInputs = [[] for _ in range(NumberOfColumns)]
++		self.proximalInputWeights = [[] for _ in range(NumberOfColumns)]
+ 
+ 
+ 
+diff --git a/ReArcPython/Globals.py b/ReArcPython/Globals.py
+index 4194eb6..706fe9d 100644
+--- a/ReArcPython/Globals.py
++++ b/ReArcPython/Globals.py
+@@ -1,6 +1,8 @@
++import math
++
+ # Globals.py is for global variables 
+ 
+-CorticalConditionDefiningInputWeight = 1.0 # (Reference value 1.0)
++CorticalConditionDefiningInputWeight = 1.7 # (Reference value 1.0)
+ 
+ # Synaptic weights are increased if the synapse gets an input, shortly afterwards the branch 
+ # injects potential into the dendrite, and shortly after than the neuron fires. However, unless 
+@@ -13,7 +15,7 @@ LayerTwoInterneuronOutputSynapticStrengths = 0
+ 
+ # Total postsynaptic potentials required to inject potential from dendrite into soma, causing neuron 
+ # to fire in layers one and two
+-CorticalBasalDendriteThreshold = 700 #(Reference value 985)
++CorticalBasalDendriteThreshold = 985 #(Reference value 985)
+ 
+ NumberOfConditionRecordingOutputsFromBlackBoxHippocampus = 0  # (Reference value 0) used in DendriteBranch 0 
+ # turns off the ConditionRecordingManagement
+@@ -71,10 +73,10 @@ NumberOfBranchesPerLayerThreePyramidal = 10 # (Reference value 10)
+ NumberOfConditionDefiningInputsPerCorticalLayerOneBranch = 20 # (Reference value 25)
+ NumberOfConditionDefiningInputsPerCorticalLayerTwoBranch = 15 # (Reference value 15)
+ NumberOfConditionDefiningInputsPerCorticalLayerThreeBranch = 15 # (Reference value 15)
+-NumberOfInputsToLayerOneInterneuronsFromEachOtherColumn = 20
+-NumberOfInputsToLayerOneInterneuronsFromOwnColumn = 10
++NumberOfInputsToLayerOneInterneuronsFromEachOtherColumn = 0
++NumberOfInputsToLayerOneInterneuronsFromOwnColumn = 0
+ NumberOfInputsToLayerTwoInterneuronsFromEachOtherColumn = 0
+-NumberOfInputsToLayerTwoInterneuronsFromOwnColumn = 20
++NumberOfInputsToLayerTwoInterneuronsFromOwnColumn = 0
+ DendriticBranchThresholdLayerOne = 450 # (Reference value 450)
+ DendriticBranchThresholdLayerTwo = 450 # (Reference value 450)
+ DendriticBranchThresholdLayerThree = 200 # (Reference value 400)
+@@ -182,5 +184,4 @@ def setModulationProbabilityFactor():
+ 		# 1 to: 75 do: [:i| ModulationProbabilityFactor addLast: ((((((((((3.1415965*2)*i)/75) sin) raisedTo: 7))*100) rounded) + 100)/(100.0))].
+ 
+ 
+-setModulationProbabilityFactor()
+ 
+diff --git a/ReArcPython/HippocampalSystemBlackBox.py b/ReArcPython/HippocampalSystemBlackBox.py
+index 33606fd..505b93d 100644
+--- a/ReArcPython/HippocampalSystemBlackBox.py
++++ b/ReArcPython/HippocampalSystemBlackBox.py
+@@ -224,18 +224,14 @@ class HippocampalSystemBlackBox:
+ 		# This code goes through timeslots 4 to 10 in the inputsFromLayerThree for each column, and adds any spikes produced by 
+ 		# any column to the total count for the column in the first OrderedCollection in 
+ 		# totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn
+-		print("self.inputsFromLayerThree: ", self.inputsFromLayerThree)
+ 		for timeslot in range(3,13):  # 10 slots 3-12 (RJT)
+ 			for column in range(NumberOfColumns):
+ 				try:  # if there is no defined inputFromLayerThree then don't change anything
+-					print("self.inputsFromLayerThree[timeslot][column]: ", self.inputsFromLayerThree[timeslot][column])
+-					print("sum(self.inputsFromLayerThree[timeslot][column]): ", sum(self.inputsFromLayerThree[timeslot][column]))
+ 					# raise Exception("Stop here")
+ 					totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn[0][column] \
+ 					+= sum(self.inputsFromLayerThree[timeslot][column])
+ 				except IndexError:
+ 					pass
+-		print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+ 		# This code goes through timeslots 29 to "39" [sic should say 38] in the inputsFromLayerThree for each column, and adds any 
+ 		# spikes produced by any column to the total count for the column in the second OrderedCollection in 
+ 		# totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn"	
+@@ -246,7 +242,6 @@ class HippocampalSystemBlackBox:
+ 						+= sum(self.inputsFromLayerThree[timeslot][column])
+ 				except IndexError:
+ 					pass
+-		print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+ 
+ 		# This code goes through timeslots 54 to "64"[sic should say 63] in the inputsFromLayerThree for each column, and adds any spikes 
+ 		# produced by any column to the total count for the column in the third OrderedCollection in 
+@@ -258,7 +253,6 @@ class HippocampalSystemBlackBox:
+ 						+= sum(self.inputsFromLayerThree[timeslot][column])
+ 				except IndexError: 
+ 					pass
+-		print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+ 		return totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn
+ 	
+ 	def determineIntermediateLayerColumnActivityOver75timeslotsForEachModulation(self):
+@@ -287,7 +281,6 @@ class HippocampalSystemBlackBox:
+ 						+= sum(self.inputsFromLayerTwo[timeslot][column])
+ 				except IndexError: # if there is no defined inputFromLayerThree then don't change anything
+ 					pass
+-		print("totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+ 
+ 		# This code goes through timeslots 26 to 35 in the inputsFromLayerTwo for each column, and adds any spikes 
+ 		# produced by any column to the total count for the column in the second OrderedCollection in 
+@@ -299,7 +292,6 @@ class HippocampalSystemBlackBox:
+ 						+= sum(self.inputsFromLayerTwo[timeslot][column])
+ 				except IndexError: # if there is no defined inputFromLayerThree then don't change anything
+ 					pass
+-		print("totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+ 		# This code goes through timeslots 51 to 60 in the inputsFromLayerTwo for each column, and adds any spikes 
+ 		# produced by any column to the total count for the column in the third OrderedCollection in 
+ 		# totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn"
+@@ -310,7 +302,6 @@ class HippocampalSystemBlackBox:
+ 						+= sum(self.inputsFromLayerTwo[timeslot][column])
+ 				except IndexError: # if there is no defined inputFromLayerThree then don't change anything
+ 					pass
+-		print("totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+ 		return totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn
+  
+ 
+@@ -523,13 +514,10 @@ class HippocampalSystemBlackBox:
+ 			# totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn is therefore modified to set to zero the count of 
+ 			# intermediate level activity of any columns with strong outputs
+ 
+-			print("hmc.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", hmc.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+ 			# print("totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn: ", totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+ 
+ 			hmc.eliminateColumnsWithStrongLayerThreeActivity(totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+ 		
+-			print("FINAL layer 2 modulation outputs: ", hmc.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+-
+ 			# The following code selects the columns to receive hippocampal input in each of the three modulation periods in the next 
+ 			# 25 milliseconds. Two columns are selected if no column produced layer three output in that modulation period in the past 
+ 			# 5 timeslots, one column if only one column produced output, otherwise no columns. The identities of the columns to receive 
+@@ -554,6 +542,7 @@ class HippocampalSystemBlackBox:
+ 				# print("hmc.columnHasSpikes: ", hmc.columnHasSpikes(mp))
+ 				# print("numberOfColumnsWithOutputInEachModulationPeriod: ", numberOfColumnsWithOutputInEachModulationPeriod)
+ 				if hmc.columnHasSpikes(mp):
++
+ 					# print("ever")
+ 					# raise Exception("Stop here")
+ 					# If two columns produced output in one modulation period of the last 75 timelots, one column needs to be selected 
+@@ -603,7 +592,7 @@ class HippocampalSystemBlackBox:
+ 		# Brain >> presentTripleCategoryInstance:withSecondCategory:withThirdCategory: 
+ 		# Brain >> presentTripleCategoryInstanceTwoAreas:withSecondCategory:withThirdCategory:
+ 		# Brain >> presentTripleCategoryInstanceWithTargetedHippocampusInputs:withSecondCategory:withThirdCategory:
+-		pass
++		self.strongActivityCount = [0,0,0]
+ 
+ class HippocampalMaxColumn:
+ 	# HippocampalMaxColumn is a utility class (method to class pattern) to simplify the code in 
+@@ -628,20 +617,18 @@ class HippocampalMaxColumn:
+ 													totalInputsFromLayerThreeInPrevious25msecByModulationPeriodAndColumn)
+ 
+ 	def appendMaxColumn(self, modulationPeriod):
+-		print("self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+ 		if max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod]) > 0: 
+-			self.lastIndex = self.columnsToGetInputFromHippocampus[modulationPeriod].  \
+-				append(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn. \
+-					index(max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod])))
+-			print("self.columnsToGetInputFromHippocampus: ", self.columnsToGetInputFromHippocampus, self.lastIndex)
+-			print("something else", self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn. \
+-					index(max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod])))
++			idx = self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod]\
++				  .index(max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod]))
++			self.columnsToGetInputFromHippocampus[modulationPeriod].append(idx)
++			self.lastIndex = idx          # <- so zeroLastIndex() works
++
+ 			# raise Exception("Stop here")
+ 
+ 	def zeroLastIndex(self, modulationPeriod):
+-		self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod][self.lastIndex] = 0
++		if self.lastIndex is not None:
++			self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod][self.lastIndex] = 0
+ 
+ 
+ 	def columnHasSpikes(self, modulationPeriod):
+-		print("self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn: ", self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn)
+ 		return max(self.totalInputsFromLayerTwoInPrevious25msecByModulationPeriodAndColumn[modulationPeriod]) != 0
+\ No newline at end of file
+diff --git a/ReArcPython/InputState.py b/ReArcPython/InputState.py
+index ca0f12e..9c0b6b1 100644
+--- a/ReArcPython/InputState.py
++++ b/ReArcPython/InputState.py
+@@ -79,7 +79,9 @@ class InputState:
+ 			# Only update if co-activation exceeds threshold
+ 			simultaneityCount = np.sum(combinedInput)
+ 			if simultaneityCount > simultaneityCountLimit:
+-				existingMeasure += combinedInput
++				for i in range(len(setOfInputs)):
++					if combinedInput[i] == 1:
++						existingMeasure[i] += 1
+ 
+ 		return existingMeasure
+ 
+diff --git a/ReArcPython/PyramidalNeuron.py b/ReArcPython/PyramidalNeuron.py
+index 8cd8d10..268cce3 100644
+--- a/ReArcPython/PyramidalNeuron.py
++++ b/ReArcPython/PyramidalNeuron.py
+@@ -5,10 +5,10 @@ from Dendrites import *
+ 
+ class PyramidalNeuron:
+ 
+-	def __init__(self, numOfBasilDendriteBranches, threshold, numOfInputs, inputs, source=None, managementInputs=0):
++	def __init__(self, numOfBasilDendriteBranches, threshold, numOfInputs, inputs, source=None, managementInputs=0, weight=None):
+ 		self.apicalDendrite = ApicalDendrite()
+ 		self.basalDendrite = BasilDendrite(numOfBasilDendriteBranches, threshold, numOfInputs, \
+-									  inputs, source, managementInputs)
++									  inputs, source, managementInputs, weight=weight)
+ 		self.potentialRecord = PotentialRecord()
+ 		self.timeSincePreviousFiring = 48
+ 		self.threshold = CorticalBasalDendriteThreshold
+diff --git a/docs/code.md b/docs/code.md
+index fcc5d85..32bdf78 100644
+--- a/docs/code.md
++++ b/docs/code.md
+@@ -266,7 +266,7 @@ GlobalInjectedPotentialDecayCurve=InjectedPotentialDecayCurve().value
+ 
+ class PotentialRecord:
+ 	def __init__(self):
+-		self.record = [0]*48
++		self.record = [0 for _ in range(48)]
+ 
+ 	def shift(self):
+ 		self.record.append(0)

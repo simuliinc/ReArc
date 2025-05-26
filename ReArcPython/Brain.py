@@ -5,6 +5,7 @@ from Globals import *
 from PresentOneCategoryInstance import *
 from InputState import *
 import numpy as np
+import itertools
 
 class Brain:
 	def __init__(self, numberOfCorticalAreas=3):
@@ -43,8 +44,8 @@ class Brain:
 		for currentColumn in range(NumberOfColumns):
 			inputPopulation[currentColumn] = list(range(InputSpaceSize))
 			for i in range(BiasOnFavouredInputs):
-				for j in favouredInputs[currentColumn]:
-					inputPopulation[currentColumn].append(j)
+				for j in range(len(favouredInputs)):
+					inputPopulation[currentColumn].append(favouredInputs[currentColumn][j])
 
 		self.visualCortex[0].addColumnQty(NumberOfColumns)
 		self.visualCortex[0].addPyramidalToLayerQtyThreshold(1, PyramidalsPerColumnLayerOne, DendriticBranchThresholdLayerOne, inputPopulation)
@@ -195,18 +196,21 @@ class Brain:
 		if not recentPresentationOutputs or not recentPresentationOutputs[0]:
 			return []
 		
-		# Initialize t2 with zeros based on first presentation's size
-		t2 = [0] * len(recentPresentationOutputs[0])
+		# Get number of columns from first timeslot
+		num_columns = len(recentPresentationOutputs[0])
 		
-		# For each presentation (t7)
+		# Initialize column totals with zeros
+		column_totals = [0] * num_columns
+		
+		# For each timeslot's presentation output
 		for presentation in recentPresentationOutputs:
-			# For each timeslot (t5)
-			for t5 in range(len(presentation)):
-				# Add the total from this layer at this timeslot
+			# For each column
+			for column_idx in range(num_columns):
+				# Add the spike count from this layer at this column
 				# Note: layer-1 for 0-based indexing
-				t2[t5] += sum(presentation[t5][layer-1])
+				column_totals[column_idx] += sum(presentation[column_idx][layer-1])
 		
-		return t2
+		return column_totals
 	
 	def presentDoubleCategoryInstanceWithSecondCategory(self, categoryInputSource, secondCategoryInputSource):
 
@@ -294,13 +298,12 @@ class Brain:
 		
 		# For each of the 8 modulation periods
 		for j in range(8):
-			period_start = 75 * j + start + 1
+			period_start = 75 * j + start
 			period_end = 75 * j + stop
 			
 			# Collect outputs for this period if within bounds
 			for k in range(period_start, period_end + 1):
 				if k < len(inputResults):
-					# currentPresentationOutputs.append(inputResults[k])
 					currentPresentationOutputs.append(Y[k])
 		
 		# Calculate totals across timeslots for layer 3 and add to PresentationResults
@@ -338,14 +341,14 @@ class Brain:
 		t5 = Y[-600:]
 		
 		# Process each category's modulation slots and add to PresentationResults
-		# First category (timeslots 1-21)
-		self.addModulationSlots(t5, 0, 21, Y) # 0 index is 1 in Smalltalk
+		# First category (timeslots 1-21 in Smalltalk, 0-20 in Python 0-based indexing)
+		self.addModulationSlots(t5, 0, 20, Y)
 
-		# Second category (timeslots 48-71)
-		self.addModulationSlots(t5, 47, 71, Y) # 0 index is 1 in Smalltalk
+		# Second category (timeslots 48-71 in Smalltalk, 47-70 in Python 0-based indexing)
+		self.addModulationSlots(t5, 47, 70, Y)
 
-		# Third category (timeslots 27-45)
-		self.addModulationSlots(t5, 26, 45, Y) # 0 index is 1 in Smalltalk
+		# Third category (timeslots 27-45 in Smalltalk, 26-44 in Python 0-based indexing)
+		self.addModulationSlots(t5, 26, 44, Y)
 
 		Y = []
 		
@@ -368,78 +371,164 @@ class Brain:
 		
 		# Initialize output array (3 categories for each presentation)
 		numPresentations = presentationStop - presentationStart + 1
-		categoryIdentifications = np.zeros((numPresentations, 3))
+		categoryIdentifications = [[] for _ in range(3)]
 		
 		# Calculate category weights for all presentations at once
-		# Matrix multiplication of results and weights
-		categoryWeights = np.dot(results[presentationStart:presentationStop+1], weights.T)
-		
+		sliceStart = presentationStart - 1  
+		sliceStopExclusive = presentationStop 
+		results = results[sliceStart:sliceStopExclusive]
+
+		for presentation in range(len(results)):
+			# print("--------------------------------")
+			# Get current category (1-based index)
+			currentPresentation = results[presentation]
+			
+			# Calculate weights for each category
+			weightsOfCategoriesInCurrentPresentation = []  # +1 for 1-based indexing
+			for cat2 in range(numberOfCategories):  # 1-based category indexing
+				referenceWeightsOfCurrentCategory = columnWeightsInFavourOfCategories[cat2]
+				currentCategoryWeightInCurrentPresentation = 0
+				
+				# Calculate weight for this category (matching Smalltalk's explicit iteration)
+				for col2 in range(len(currentPresentation)):
+					currentCategoryWeightInCurrentPresentation += (
+						currentPresentation[col2] * referenceWeightsOfCurrentCategory[col2]
+					)
+
+				# print("cat2: ", cat2, "currentCategoryWeightInCurrentPresentation: ", currentCategoryWeightInCurrentPresentation)
+				weightsOfCategoriesInCurrentPresentation.append(currentCategoryWeightInCurrentPresentation)
+			
+			# Find category with largest weight (adjusting for 1-based indexing)
+			# print("weightsOfCategoriesInCurrentPresentation: ", weightsOfCategoriesInCurrentPresentation)
+			selectedCategory = np.argmax(weightsOfCategoriesInCurrentPresentation)
+			# print("weightsOfCategoriesInCurrentPresentation: ", weightsOfCategoriesInCurrentPresentation)
+
 		# Find top 3 categories for each presentation
 		for i in range(numPresentations):
-			# Get indices of top 3 maximum values
-			top3_indices = np.argpartition(categoryWeights[i], -3)[-3:]
-			# Sort them by their values in descending order
-			top3_indices = top3_indices[np.argsort(-categoryWeights[i][top3_indices])]
-			categoryIdentifications[i] = top3_indices
-		
-		return categoryIdentifications
+			categoryWeights = []
+			current_outputs = results[i]
+			
+			for j in range(numberOfCategories):
+				currentCategoryWeight = 0
+				for k in range(NumberOfColumns):
+					currentCategoryWeight += current_outputs[k] * columnWeightsInFavourOfCategories[j][k]
+				categoryWeights.append(currentCategoryWeight)
 
-	def calculationOfColumnWeightsInFavourOfThirtyCategories(self, presentationResults, startPoint=601, stopPoint=900, numberOfCategories=30, numberOfColumns=15, weightReductionFactor=1.035):
+			currentPresentation = results[i]
+			
+			# Calculate weights for each category
+			weightsOfCategoriesInCurrentPresentation = []  # +1 for 1-based indexing
+			for cat2 in range(0, numberOfCategories):  # 1-based category indexing
+				referenceWeightsOfCurrentCategory = columnWeightsInFavourOfCategories[cat2]
+				currentCategoryWeightInCurrentPresentation = 0
+				
+				# Calculate weight for this category (matching Smalltalk's explicit iteration)
+				for col2 in range(len(currentPresentation)):
+					currentCategoryWeightInCurrentPresentation += (
+						currentPresentation[col2] * referenceWeightsOfCurrentCategory[col2]
+					)
+
+				# print("cat2: ", cat2, "currentCategoryWeightInCurrentPresentation: ", currentCategoryWeightInCurrentPresentation)
+				weightsOfCategoriesInCurrentPresentation.append(currentCategoryWeightInCurrentPresentation)
+			
+			# Find category with largest weight (adjusting for 1-based indexing)
+			current_category_identifications = np.argmax(weightsOfCategoriesInCurrentPresentation)
+
+			current_category_identifications = np.argsort(categoryWeights)
+			categoryIdentifications[0].append(current_category_identifications[2])
+			categoryWeights[current_category_identifications[2]] = 0
+			
+			current_category_identifications = np.argsort(categoryWeights)[-3:]
+			categoryIdentifications[1].append(current_category_identifications[2])
+			categoryWeights[current_category_identifications[2]] = 0
+			
+			current_category_identifications = np.argsort(categoryWeights)[-3:]
+			categoryIdentifications[2].append(current_category_identifications[2])
+		
+		# Convert from numpy array to regular list
+		result = []
+		for category_list in categoryIdentifications:
+			result.append([int(category) for category in category_list])
+		return result
+
+	def calculationOfColumnWeightsInFavourOfThirtyCategories(self, presentationResults, startPoint=601, stopPoint=900, numberOfCategories=30, numberOfColumns=15, weightReductionFactor=1.05):
 		# Get the slice from startPoint-1 to stopPoint since Python is 0-based
 		resultsToBeProcessed = presentationResults[startPoint-1:stopPoint]
-		numberOfPresentations = stopPoint - startPoint + 1
+		numberOfPresentations = stopPoint - startPoint + 1	
 
-		print("presentationResults: ", len(presentationResults), 'x', len(presentationResults[0]))
-		print("resultsToBeProcessed: ", len(resultsToBeProcessed), 'x', len(resultsToBeProcessed[0]))
+		# print("presentationResults: ", len(presentationResults), 'x', len(presentationResults[0]))
+		# print("resultsToBeProcessed: ", len(resultsToBeProcessed), 'x', len(resultsToBeProcessed[0]))
 
 		# Initialize column weights for categories (1-based indexing to match Smalltalk)
 		# Add an extra row at index 0 that won't be used to maintain 1-based indexing
-		columnWeightsInFavourOfCategories = np.zeros((numberOfCategories + 1, numberOfColumns), dtype=int)
+		columnWeightsInFavourOfCategories = []
+		for i in range(numberOfCategories):
+			columnWeightsInFavourOfCategories.append([])
+			for j in range(numberOfColumns):
+				columnWeightsInFavourOfCategories[i].append(0)
+
+		# print("columnWeightsInFavourOfCategories: ", len(columnWeightsInFavourOfCategories), 'x', len(columnWeightsInFavourOfCategories[0]))
 
 		# Create target array with 1-based category indices
 		# In Smalltalk this was: 1 to: (numberOfPresentations/numberOfCategories) do: [:cat1|
 		#                           1 to: numberOfCategories do: [:k| target addLast: k]
 		target = []
-		for _ in range(numberOfPresentations // numberOfCategories):
-			for k in range(1, numberOfCategories + 1):
+		for _ in range(int(numberOfPresentations / numberOfCategories)):
+			for k in range(numberOfCategories):
 				target.append(k)
+
+		# print("target: ", target)
+
+
+		# print("numberOfPresentations: ", numberOfPresentations)
+		selectedCategories = np.array([], dtype=int)
+		correctCategories = np.array([], dtype=int)
 
 		# Process each presentation
 		for presentation in range(numberOfPresentations):
+			# print("--------------------------------")
 			# Get current category (1-based index)
 			currentIdentity = target[presentation]
 			currentPresentation = resultsToBeProcessed[presentation]
+
+			
 			
 			# Calculate weights for each category
-			weightsOfCategoriesInCurrentPresentation = np.zeros(numberOfCategories + 1)  # +1 for 1-based indexing
-			for cat2 in range(1, numberOfCategories + 1):  # 1-based category indexing
+			weightsOfCategoriesInCurrentPresentation = []  # +1 for 1-based indexing
+			for cat2 in range(numberOfCategories):  # 1-based category indexing
 				referenceWeightsOfCurrentCategory = columnWeightsInFavourOfCategories[cat2]
 				currentCategoryWeightInCurrentPresentation = 0
 				
 				# Calculate weight for this category (matching Smalltalk's explicit iteration)
-				for col2 in range(numberOfColumns):
+				for col2 in range(len(currentPresentation)):
 					currentCategoryWeightInCurrentPresentation += (
 						currentPresentation[col2] * referenceWeightsOfCurrentCategory[col2]
 					)
-				weightsOfCategoriesInCurrentPresentation[cat2] = currentCategoryWeightInCurrentPresentation
+
+				# print("cat2: ", cat2, "currentCategoryWeightInCurrentPresentation: ", currentCategoryWeightInCurrentPresentation)
+				weightsOfCategoriesInCurrentPresentation.append(currentCategoryWeightInCurrentPresentation)
 			
 			# Find category with largest weight (adjusting for 1-based indexing)
+			# print("weightsOfCategoriesInCurrentPresentation: ", weightsOfCategoriesInCurrentPresentation)
 			selectedCategory = np.argmax(weightsOfCategoriesInCurrentPresentation)
-			if selectedCategory == 0:  # Handle case where argmax returns 0
-				selectedCategory = np.argmax(weightsOfCategoriesInCurrentPresentation[1:]) + 1
+			# print("weightsOfCategoriesInCurrentPresentation: ", weightsOfCategoriesInCurrentPresentation)
+			selectedCategories = np.append(selectedCategories, selectedCategory)
+			correctCategories = np.append(correctCategories, currentIdentity)
 
 			# Update weights for correct category
-			columnWeightsInFavourOfCategories[currentIdentity] += currentPresentation
+			print("currentIdentity: ", currentIdentity)
+			for col4 in range(numberOfColumns):
+				columnWeightsInFavourOfCategories[currentIdentity][col4] += currentPresentation[col4] * weightReductionFactor
 			
 			# If selection was incorrect, reduce weights for incorrectly selected category
 			if selectedCategory != currentIdentity:
-				for col4 in range(numberOfColumns):
-					if currentPresentation[col4] > 0:
-						columnWeightsInFavourOfCategories[selectedCategory][col4] = int(
-							columnWeightsInFavourOfCategories[selectedCategory][col4] / weightReductionFactor
-						)
+				for col5 in range(numberOfColumns):
+					if currentPresentation[col5] > 0:
+						columnWeightsInFavourOfCategories[selectedCategory][col5] /= weightReductionFactor
 
-		return columnWeightsInFavourOfCategories[1:]  # Remove the padding row we added for 1-based indexing
+		print("selectedCategories: ", selectedCategories)
+		print("correctCategories: ", correctCategories)
+		return columnWeightsInFavourOfCategories  # Remove the padding row we added for 1-based indexing
 
 class BrainActivity:
 
@@ -452,5 +541,3 @@ class BrainActivity:
 
 	def __init__(self, timeSlot, column, layer, spikes):
 		pass
-
-
